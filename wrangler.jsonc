@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bitwise-security-test",
+  "pages_build_output_dir": "./out",
+  "compatibility_date": "2026-08-10",
+  "secrets": {
+    "required": [
+      "RESEND_API_KEY",
+      "RESEND_FROM_EMAIL",
+      "CONTACT_EMAIL"
+    ]
+  }
+}

@@ -80,20 +80,37 @@ The logo is currently rendered as SVG in the Navigation component. To use your a
 
 ## 📧 Contact Form
 
-The contact form opens the user's default email client with pre-filled information sent to:
-**info@bitwise-security.nl**
+The contact form posts to `/api/contact`, implemented by the Cloudflare Pages
+Function in `functions/api/contact.ts`. It sends through the Resend HTTPS API.
+
+Configure these encrypted Pages secrets before testing email delivery:
+
+- `RESEND_API_KEY`: a Resend key restricted to sending email
+- `RESEND_FROM_EMAIL`: a sender on a domain verified by Resend
+- `CONTACT_EMAIL`: the address that receives contact submissions
+
+Do not commit Resend or Cloudflare credentials. For local testing, use an
+untracked `.dev.vars` file.
 
 ## 🌐 Deployment
 
-### Vercel (Recommended)
-1. Push code to GitHub
-2. Import project in Vercel
-3. Deploy automatically
+### Cloudflare Pages
+
+The site is exported to static files in `out`, while the contact endpoint runs
+as a Pages Function. The staging project is deliberately isolated from the live
+domain and existing production services.
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+npm run pages:deploy -- --project-name bitwise-security-test --branch agent/cloudflare-pages-test
+```
 
 ### Other Platforms
-- **Netlify**: Works out of the box
-- **Docker**: Add Dockerfile for containerization
-- **VPS**: Use PM2 or similar process manager
+The static `out` directory can be served by other static hosts, but the contact
+form requires a compatible `/api/contact` serverless endpoint.
 
 ## 🔧 Technologies Used
 
