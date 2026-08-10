@@ -97,15 +97,14 @@ untracked `.dev.vars` file.
 ### Cloudflare Pages
 
 The site is exported to static files in `out`, while the contact endpoint runs
-as a Pages Function. The staging project is deliberately isolated from the live
-domain and existing production services.
+as a Pages Function on the `bitwise-security` Cloudflare Pages project.
 
 ```bash
 npm ci
 npm run lint
 npm run typecheck
 npm run build
-npm run pages:deploy -- --project-name bitwise-security-test --branch agent/cloudflare-pages-test
+npm run pages:deploy -- --project-name bitwise-security --branch main
 ```
 
 ### Other Platforms
