@@ -13,6 +13,7 @@ export default function Contact() {
     company: "",
     service: "",
     message: "",
+    website: "",
   });
   const [status, setStatus] = useState("");
   const [showPopup, setShowPopup] = useState(false);
@@ -38,6 +39,7 @@ export default function Contact() {
         company: "",
         service: "",
         message: "",
+        website: "",
       });
     } catch {
       setStatus("error");
@@ -157,6 +159,18 @@ export default function Contact() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="sr-only" aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  type="text"
+                  id="website"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={formData.website}
+                  onChange={handleChange}
+                />
+              </div>
               <div>
                 <label
                   htmlFor="name"
@@ -169,6 +183,7 @@ export default function Contact() {
                   id="name"
                   name="name"
                   required
+                  maxLength={120}
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-cyber-dark border border-cyber-blue/30 rounded-lg text-white placeholder-gray-500 focus:border-cyber-blue focus:outline-none focus:ring-2 focus:ring-cyber-blue/50 transition-all"
@@ -188,6 +203,7 @@ export default function Contact() {
                   id="email"
                   name="email"
                   required
+                  maxLength={254}
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-cyber-dark border border-cyber-blue/30 rounded-lg text-white placeholder-gray-500 focus:border-cyber-blue focus:outline-none focus:ring-2 focus:ring-cyber-blue/50 transition-all"
@@ -206,6 +222,7 @@ export default function Contact() {
                   type="text"
                   id="company"
                   name="company"
+                  maxLength={160}
                   value={formData.company}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-cyber-dark border border-cyber-blue/30 rounded-lg text-white placeholder-gray-500 focus:border-cyber-blue focus:outline-none focus:ring-2 focus:ring-cyber-blue/50 transition-all"
@@ -248,6 +265,7 @@ export default function Contact() {
                   id="message"
                   name="message"
                   required
+                  maxLength={5000}
                   value={formData.message}
                   onChange={handleChange}
                   rows={5}

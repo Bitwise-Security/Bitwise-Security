@@ -1,0 +1,155 @@
+{
+  "seo": {
+    "title": "Bitwise Security - Reporter Tool",
+    "description": "Bitwise Pentest Reporter is a secure workspace for engagements, findings, evidence, client access, and professional reporting."
+  },
+  "hero": {
+    "eyebrow": "[ BITWISE REPORTER ]",
+    "titlePrefix": "REPORTING",
+    "titleAccent": "THAT SHIPS",
+    "description": "Bitwise Pentest Reporter is a secure, web-based workspace to capture findings, collaborate with your team, and deliver professional reports and a branded client portal from one place."
+  },
+  "pillars": [
+    {
+      "label": "Secure",
+      "title": "Security-first delivery",
+      "text": "Built to handle sensitive assessment data with the same discipline you expect from the reporting process itself."
+    },
+    {
+      "label": "Structured",
+      "title": "Everything in one place",
+      "text": "Engagements, findings, evidence, exports, and client access stay connected throughout the workflow."
+    },
+    {
+      "label": "Branded",
+      "title": "A portal that feels yours",
+      "text": "Client-facing access uses your logo and colors so the experience stays polished and consistent."
+    }
+  ],
+  "audience": [
+    {
+      "title": "Security consultancies",
+      "text": "Keep engagements structured, versioned, and easy to review without juggling scattered documents."
+    },
+    {
+      "title": "Internal red teams",
+      "text": "Track findings, evidence, and remediation progress in one controlled workspace."
+    },
+    {
+      "title": "Client stakeholders",
+      "text": "Give approved access to a branded portal so customers can follow results without full admin visibility."
+    }
+  ],
+  "trust": {
+    "title": "Trust and operations",
+    "text": "Built for production-style deployment with environment-based configuration, session hardening, optional transactional email, and clear privacy and retention considerations for highly sensitive test data."
+  },
+  "solves": {
+    "title": "What it solves",
+    "text": "Structured reporting removes ambiguity after the test and makes it easy to prioritize, report upward, and align with the risk frameworks your organization already uses.",
+    "highlights": [
+      "Consistent delivery",
+      "Controlled client access",
+      "Evidence linked to findings",
+      "Professional exports"
+    ]
+  },
+  "capabilities": {
+    "title": "Core capabilities",
+    "items": [
+      {
+        "title": "Engagement workspace",
+        "text": "Scope, methodology, executive narrative, appendices, scoring frameworks, report versioning, and report lock for sign-off workflows."
+      },
+      {
+        "title": "Rich findings",
+        "text": "Severity, CVSS, MITRE ATT&CK, CWE/CVE, compliance tags, reproduction steps, remediation tracking, and client visibility controls."
+      },
+      {
+        "title": "Evidence and uploads",
+        "text": "Screenshots and attachments tied to findings with sensible upload limits and careful handling of sensitive material."
+      },
+      {
+        "title": "Client portal",
+        "text": "A branded experience with your logo and colors so customers only see what they should."
+      },
+      {
+        "title": "Professional output",
+        "text": "Generate polished reports and PDF exports for delivery, with optional encrypted workflows through email integration."
+      },
+      {
+        "title": "Imports and scale",
+        "text": "Bring data in from Burp, Nuclei, scanners, or note-taking tools instead of retyping everything."
+      }
+    ]
+  },
+  "governance": {
+    "title": "Governance and scale",
+    "items": [
+      "Roles for admin, analyst, manager, reviewer, and customer",
+      "Invites, MFA, audit logging, and rate limiting",
+      "Trash, retention, and access controls for sensitive assessments",
+      "Optional RAG knowledge for consistency and faster drafting"
+    ]
+  },
+  "outcomes": {
+    "title": "What you get",
+    "items": [
+      "Clear risk picture with what was tested, what was found, and what it means for the business",
+      "Actionable remediation detail with impact, reproduction, and guidance where providers choose to share it",
+      "One place for scope, objectives, summaries, and technical detail",
+      "Controlled branded access instead of scattered email threads and ad-hoc file shares",
+      "Visible issue lifecycle from open to remediated, retested, or accepted risk",
+      "Structured severity and references that make prioritization easier for leadership and compliance teams"
+    ]
+  },
+  "gallery": {
+    "title": "Screens from the reporter tool",
+    "subtitle": "Dark, focused, and built to keep sensitive assessment data clear without sacrificing polish.",
+    "items": [
+      {
+        "src": "/reporter/login.jpeg",
+        "alt": "Bitwise Reporter login screen",
+        "title": "Secure login"
+      },
+      {
+        "src": "/reporter/customer-portal.jpeg",
+        "alt": "Customer portal dashboard",
+        "title": "Customer portal"
+      },
+      {
+        "src": "/reporter/engagements-overview.jpeg",
+        "alt": "Engagement overview dashboard",
+        "title": "Engagement overview"
+      },
+      {
+        "src": "/reporter/finding-detail-1.jpeg",
+        "alt": "Finding detail view with sidebar and charts",
+        "title": "Finding detail"
+      },
+      {
+        "src": "/reporter/finding-detail-2.jpeg",
+        "alt": "Finding detail evidence and comments",
+        "title": "Evidence and comments"
+      },
+      {
+        "src": "/reporter/executive-summary.jpeg",
+        "alt": "Executive summary view",
+        "title": "Executive summary"
+      }
+    ]
+  },
+  "why": {
+    "title": "Why it matters",
+    "items": [
+      "Most pentesters deliver a static file at the end of an engagement. This experience gives you transparency during the test, clarity on what to fix, and proof of remediation in a format that supports due diligence.",
+      "It is designed to feel like a living report, not a snapshot: findings stay structured, evidence remains attached, and leadership can move from summary to technical detail without losing context."
+    ]
+  },
+  "delivery": {
+    "title": "Ready for delivery",
+    "text": "Included with every engagement. Nothing to install. Nothing extra to manage. Just a secure, branded workflow for reporting and client collaboration.",
+    "primaryCta": "Discuss reporter tooling",
+    "secondaryCta": "See services"
+  }
+}

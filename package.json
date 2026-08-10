@@ -5,30 +5,33 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "pages:dev": "wrangler pages dev out",
+    "pages:deploy": "wrangler pages deploy out"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",
     "framer-motion": "^10.16.16",
-    "next": "14.0.4",
-    "nodemailer": "^8.0.2",
+    "next": "14.2.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.183.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20260810.1",
     "@types/node": "^20.10.6",
-    "@types/nodemailer": "^7.0.11",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
-    "eslint-config-next": "14.0.4",
+    "eslint-config-next": "14.2.35",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "wrangler": "4.120.1"
   }
 }
