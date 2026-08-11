@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CyberBackground } from "@/components/common";
 import contactData from "@/data/contact.json";
@@ -273,6 +274,19 @@ export default function Contact() {
                   placeholder="Tell us about your security needs..."
                 />
               </div>
+
+              <p className="text-xs leading-5 text-gray-400">
+                We use the information you provide to respond to your enquiry.
+                Please do not include passwords or sensitive vulnerability
+                evidence. See our{" "}
+                <Link
+                  href="/privacy"
+                  className="text-cyber-blue underline decoration-cyber-blue/40 underline-offset-4 hover:text-cyan-300"
+                >
+                  Privacy &amp; Cookie Policy
+                </Link>
+                .
+              </p>
 
               <button
                 type="submit"
