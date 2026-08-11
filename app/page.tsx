@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ParticleCanvas from "@/components/homepage/ParticleCanvas";
 import FireCanvas from "@/components/homepage/FireCanvas";
@@ -94,6 +95,36 @@ export default function Home() {
           }}
           className="homepage-center"
         >
+          <section className="relative z-[22] -mb-5 w-[min(640px,92vw)] rounded-2xl border border-cyber-blue/35 bg-[#050d1e]/85 px-5 py-5 text-center shadow-2xl shadow-cyber-blue/15 backdrop-blur-md sm:px-8 sm:py-6">
+            <p className="mb-2 font-mono text-[10px] font-semibold tracking-[0.28em] text-cyber-orange sm:text-xs">
+              [ MANUAL. METHODICAL. ACTIONABLE. ]
+            </p>
+            <h1 className="font-orbitron text-[clamp(1.6rem,3vw,2.55rem)] font-black leading-tight text-white">
+              Find weaknesses{" "}
+              <span className="text-cyber-blue text-glow">
+                before attackers do.
+              </span>
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-300 sm:text-base">
+              Manual penetration testing for web applications, cloud, Active
+              Directory, mobile, source code, and hardware.
+            </p>
+            <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                href="/contact"
+                className="rounded-lg bg-cyber-blue px-6 py-3 font-semibold text-cyber-dark transition-all hover:bg-cyan-300 hover:shadow-lg hover:shadow-cyber-blue/30 focus:outline-none focus:ring-2 focus:ring-cyan-200"
+              >
+                Discuss your scope
+              </Link>
+              <Link
+                href="/services"
+                className="rounded-lg border border-cyber-blue/50 bg-cyber-dark/70 px-6 py-3 font-semibold text-gray-200 transition-all hover:border-cyber-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-cyber-blue"
+              >
+                View services
+              </Link>
+            </div>
+          </section>
+
           <div
             style={{
               position: "absolute",
