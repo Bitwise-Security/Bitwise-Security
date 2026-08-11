@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const GOOGLE_TAG_ID = "G-PYJ7K51X2H";
@@ -78,7 +79,14 @@ export default function GoogleTagConsent() {
                 We use Google Analytics to understand site usage and measure
                 advertising performance. Storage and advertising use remain
                 disabled unless you accept. You can change your choice at any
-                time.
+                time. Read our{" "}
+                <Link
+                  href="/privacy"
+                  className="text-cyber-blue underline decoration-cyber-blue/50 underline-offset-4 hover:text-cyan-300"
+                >
+                  Privacy &amp; Cookie Policy
+                </Link>
+                .
               </p>
             </div>
             <div className="flex shrink-0 flex-col gap-2 sm:min-w-40">
@@ -100,13 +108,21 @@ export default function GoogleTagConsent() {
           </div>
         </section>
       ) : (
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="fixed bottom-3 left-3 z-[90] rounded-md border border-cyber-blue/30 bg-cyber-dark/90 px-3 py-2 text-xs text-gray-300 shadow-lg backdrop-blur-sm transition-colors hover:border-cyber-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-cyber-blue"
-        >
-          Cookie settings
-        </button>
+        <div className="fixed bottom-3 left-3 z-[90] flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-md border border-cyber-blue/30 bg-cyber-dark/90 px-3 py-2 text-gray-300 shadow-lg backdrop-blur-sm transition-colors hover:border-cyber-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-cyber-blue"
+          >
+            Cookie settings
+          </button>
+          <Link
+            href="/privacy"
+            className="rounded-md border border-gray-600/40 bg-cyber-dark/90 px-3 py-2 text-gray-400 shadow-lg backdrop-blur-sm transition-colors hover:border-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            Privacy
+          </Link>
+        </div>
       )}
     </>
   );
