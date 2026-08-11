@@ -8,7 +8,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(4100),
   PUBLIC_ORIGIN: z.string().url(),
-  DATABASE_URL: z.string().min(1),
+  D1_BINDING_ORIGIN: z.string().url().default("http://portal-db.internal"),
   REDIS_URL: z.string().min(1),
   RATE_LIMIT_BACKEND: z.enum(["memory", "redis"]).default("redis"),
   TRUSTED_EDGE_GATEWAY: booleanString.default(false),
@@ -114,12 +114,6 @@ export function getConfig(): Config {
   }
   if (cached.NODE_ENV === "production" && cached.EMAIL_PROVIDER !== "resend") {
     throw new Error("Production email must use the Resend provider");
-  }
-  if (cached.NODE_ENV === "production") {
-    const databaseUrl = new URL(cached.DATABASE_URL);
-    if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol) || databaseUrl.searchParams.get("sslmode") !== "verify-full") {
-      throw new Error("Production DATABASE_URL must be PostgreSQL with sslmode=verify-full");
-    }
   }
   if (Boolean(cached.BOOTSTRAP_ADMIN_EMAIL) !== Boolean(cached.BOOTSTRAP_ADMIN_PASSWORD)) {
     throw new Error("BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD must be provided together");

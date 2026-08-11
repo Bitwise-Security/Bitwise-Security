@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify";
-import type pg from "pg";
+import type { Queryable as DatabaseQueryable } from "./db.js";
 
 export type Role = "ADMIN" | "CLIENT";
 
@@ -22,7 +22,7 @@ export interface AuditInput {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
-export type Queryable = Pick<pg.Pool, "query"> | Pick<pg.PoolClient, "query">;
+export type Queryable = DatabaseQueryable;
 
 export function requestContext(request: FastifyRequest): {
   ipAddress: string;
@@ -40,4 +40,3 @@ declare module "fastify" {
     auth: AuthContext | null;
   }
 }
-

@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { getConfig } from "../config.js";
-import { getPool, withTransaction } from "../db.js";
+import { getPool } from "../db.js";
 import { AppError } from "../errors.js";
 import { canAccessSpace, findAuthorizedFile } from "../files/authorization.js";
 import { decryptChunk } from "../files/file-crypto.js";
@@ -12,7 +12,7 @@ import { clientFilePolicy, declaredFileAllowed, sanitizeDisplayName } from "../f
 import { getStorage } from "../files/storage.js";
 import { constantTimeTextEqual, tokenDigest } from "../security/crypto.js";
 import { requireAuth, requireCsrf } from "../security/sessions.js";
-import { writeAuditEvent } from "../services/audit.js";
+import { auditEventQuery, writeAuditEvent } from "../services/audit.js";
 
 const uploadCreateSchema = z.object({
   displayName: z.string().min(1).max(500),
@@ -157,18 +157,19 @@ export function registerFileRoutes(app: FastifyInstance): void {
       let storageUploadId: string | null = null;
       try {
         storageUploadId = await storage.createUpload(storageKey);
-        const upload = await withTransaction(async (client) => {
-          await client.query(
+        const uploadId = randomUUID();
+        const now = Date.now();
+        await getPool().batch([
+          {
+            sql:
             `INSERT INTO files
                (id, organization_id, space_id, uploader_user_id, direction,
                 display_name, storage_key, declared_content_type, plaintext_size,
                 chunk_size, chunk_count, nonce_prefix, wrapped_dek, key_provider,
                 key_version, expires_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                     $13, $14, $15,
-                     CASE WHEN $16::integer IS NULL THEN NULL
-                          ELSE now() + ($16 * interval '1 day') END)`,
-            [
+                     $13, $14, $15, $16)`,
+            params: [
               fileId,
               auth.organizationId,
               params.data.id,
@@ -184,34 +185,29 @@ export function registerFileRoutes(app: FastifyInstance): void {
               generatedKey.wrappedKey,
               generatedKey.provider,
               generatedKey.version,
-              body.data.expiresInDays ?? null,
+              body.data.expiresInDays == null ? null : now + body.data.expiresInDays * 86_400_000,
             ],
-          );
-          const uploadResult = await client.query<{ id: string }>(
-            `INSERT INTO upload_sessions
-               (file_id, created_by, storage_upload_id, expires_at)
-             VALUES ($1, $2, $3, now() + interval '24 hours') RETURNING id`,
-            [fileId, auth.userId, storageUploadId],
-          );
-          await writeAuditEvent(
-            request,
-            {
-              organizationId: auth.organizationId,
-              actorUserId: auth.userId,
-              action: "FILE_UPLOAD_STARTED",
-              targetType: "FILE",
-              targetId: fileId,
-              outcome: "SUCCESS",
-              metadata: { size: body.data.size, direction: auth.role === "ADMIN" ? "ADMIN_TO_CLIENT" : "CLIENT_TO_ADMIN" },
-            },
-            client,
-          );
-          return uploadResult.rows[0]!.id;
-        });
+          },
+          {
+            sql: `INSERT INTO upload_sessions
+                    (id, file_id, created_by, storage_upload_id, expires_at)
+                  VALUES ($1, $2, $3, $4, $5)`,
+            params: [uploadId, fileId, auth.userId, storageUploadId, now + 86_400_000],
+          },
+          auditEventQuery(request, {
+            organizationId: auth.organizationId,
+            actorUserId: auth.userId,
+            action: "FILE_UPLOAD_STARTED",
+            targetType: "FILE",
+            targetId: fileId,
+            outcome: "SUCCESS",
+            metadata: { size: body.data.size, direction: auth.role === "ADMIN" ? "ADMIN_TO_CLIENT" : "CLIENT_TO_ADMIN" },
+          }),
+        ]);
         const plaintextKey = generatedKey.plaintextKey.toString("base64");
         generatedKey.plaintextKey.fill(0);
         return reply.code(201).send({
-          id: upload,
+          id: uploadId,
           fileId,
           chunkSize,
           chunkCount,
@@ -251,26 +247,32 @@ export function registerFileRoutes(app: FastifyInstance): void {
           throw new AppError(415, "The renamed extension must match the original file type", "FILE_TYPE_BLOCKED");
         }
       }
-      await withTransaction(async (client) => {
-        await client.query(
+      const now = Date.now();
+      await getPool().batch([
+        {
+          sql:
           `UPDATE files SET
              display_name = COALESCE($2, display_name),
-             expires_at = CASE WHEN $3::boolean THEN
-               CASE WHEN $4::integer IS NULL THEN NULL ELSE now() + ($4 * interval '1 day') END
-               ELSE expires_at END,
-             updated_at = now()
+             expires_at = CASE WHEN $3 THEN $4 ELSE expires_at END,
+             updated_at = $5
            WHERE id = $1`,
-          [file.id, displayName, body.data.expiresInDays !== undefined, body.data.expiresInDays ?? null],
-        );
-        await writeAuditEvent(request, {
+          params: [
+            file.id,
+            displayName,
+            body.data.expiresInDays !== undefined,
+            body.data.expiresInDays == null ? null : now + body.data.expiresInDays * 86_400_000,
+            now,
+          ],
+        },
+        auditEventQuery(request, {
           organizationId: auth.organizationId,
           actorUserId: auth.userId,
           action: "FILE_METADATA_CHANGED",
           targetType: "FILE",
           targetId: file.id,
           outcome: "SUCCESS",
-        }, client);
-      });
+        }),
+      ]);
       return { message: "File details updated" };
     },
   );
@@ -289,20 +291,21 @@ export function registerFileRoutes(app: FastifyInstance): void {
       }
       if (file.status === "UPLOADING") throw new AppError(409, "Abort the active upload instead", "UPLOAD_ACTIVE");
       await getStorage().deleteObject(file.storage_key);
-      await withTransaction(async (client) => {
-        await client.query(
-          "UPDATE files SET status = 'DELETED', deleted_at = now(), updated_at = now() WHERE id = $1",
-          [file.id],
-        );
-        await writeAuditEvent(request, {
+      const now = Date.now();
+      await getPool().batch([
+        {
+          sql: "UPDATE files SET status = 'DELETED', deleted_at = $2, updated_at = $2 WHERE id = $1",
+          params: [file.id, now],
+        },
+        auditEventQuery(request, {
           organizationId: auth.organizationId,
           actorUserId: auth.userId,
           action: "FILE_DELETED",
           targetType: "FILE",
           targetId: file.id,
           outcome: "SUCCESS",
-        }, client);
-      });
+        }),
+      ]);
       return reply.code(204).send();
     },
   );
@@ -457,19 +460,18 @@ export function registerFileRoutes(app: FastifyInstance): void {
           partsResult.rows.map((part) => ({ partNumber: part.part_number, etag: part.etag })),
         );
         const ciphertextSize = partsResult.rows.reduce((sum, part) => sum + part.ciphertext_size, 0);
-        await withTransaction(async (client) => {
-          await client.query(
-            `UPDATE upload_sessions SET state = 'COMPLETED', completed_at = now() WHERE id = $1`,
-            [upload.upload_session_id],
-          );
-          await client.query(
-            `UPDATE files SET status = 'QUARANTINED', ciphertext_size = $2, updated_at = now()
-             WHERE id = $1`,
-            [upload.file_id, ciphertextSize],
-          );
-          await writeAuditEvent(
-            request,
-            {
+        const now = Date.now();
+        await getPool().batch([
+          {
+            sql: `UPDATE upload_sessions SET state = 'COMPLETED', completed_at = $2 WHERE id = $1`,
+            params: [upload.upload_session_id, now],
+          },
+          {
+            sql: `UPDATE files SET status = 'QUARANTINED', ciphertext_size = $2, updated_at = $3
+                  WHERE id = $1`,
+            params: [upload.file_id, ciphertextSize, now],
+          },
+          auditEventQuery(request, {
               organizationId: request.auth!.organizationId,
               actorUserId: request.auth!.userId,
               action: "FILE_UPLOAD_COMPLETED",
@@ -477,10 +479,8 @@ export function registerFileRoutes(app: FastifyInstance): void {
               targetId: upload.file_id,
               outcome: "SUCCESS",
               metadata: { scanState: "QUARANTINED" },
-            },
-            client,
-          );
-        });
+          }),
+        ]);
       } catch (error) {
         await getPool().query("UPDATE upload_sessions SET state = 'OPEN' WHERE id = $1", [upload.upload_session_id]);
         throw error;
@@ -498,22 +498,19 @@ export function registerFileRoutes(app: FastifyInstance): void {
       const upload = await findOwnedUpload(request, params.data.id);
       if (!upload) throw new AppError(404, "Upload not found", "NOT_FOUND");
       await getStorage().abortUpload(upload.storage_key, upload.storage_upload_id);
-      await withTransaction(async (client) => {
-        await client.query("UPDATE upload_sessions SET state = 'ABORTED' WHERE id = $1", [upload.upload_session_id]);
-        await client.query("UPDATE files SET status = 'DELETED', deleted_at = now() WHERE id = $1", [upload.file_id]);
-        await writeAuditEvent(
-          request,
-          {
+      const now = Date.now();
+      await getPool().batch([
+        { sql: "UPDATE upload_sessions SET state = 'ABORTED' WHERE id = $1", params: [upload.upload_session_id] },
+        { sql: "UPDATE files SET status = 'DELETED', deleted_at = $2, updated_at = $2 WHERE id = $1", params: [upload.file_id, now] },
+        auditEventQuery(request, {
             organizationId: request.auth!.organizationId,
             actorUserId: request.auth!.userId,
             action: "FILE_UPLOAD_ABORTED",
             targetType: "FILE",
             targetId: upload.file_id,
             outcome: "SUCCESS",
-          },
-          client,
-        );
-      });
+        }),
+      ]);
       return reply.code(204).send();
     },
   );
@@ -534,7 +531,7 @@ export function registerFileRoutes(app: FastifyInstance): void {
       const ticket = `${payload}.${signDownloadTicket(payload)}`;
       await getPool().query(
         `INSERT INTO download_tickets (id, file_id, user_id, token_digest, expires_at)
-         VALUES ($1, $2, $3, $4, to_timestamp($5 / 1000.0))`,
+         VALUES ($1, $2, $3, $4, $5)`,
         [id, file.id, request.auth!.userId, tokenDigest(ticket), expires],
       );
       return { url: `/api/v1/downloads/${encodeURIComponent(ticket)}`, expiresInSeconds: 60 };
@@ -550,16 +547,14 @@ export function registerFileRoutes(app: FastifyInstance): void {
       const parsed = parseTicket(params.data.ticket);
       if (!parsed) throw new AppError(404, "Download not found", "NOT_FOUND");
       const auth = request.auth!;
-      const ticketResult = await withTransaction(async (client) => {
-        const result = await client.query<{ file_id: string }>(
-          `UPDATE download_tickets SET consumed_at = now()
+      const result = await getPool().query<{ file_id: string }>(
+          `UPDATE download_tickets SET consumed_at = $4
            WHERE id = $1 AND user_id = $2 AND token_digest = $3
-             AND consumed_at IS NULL AND expires_at > now()
+             AND consumed_at IS NULL AND expires_at > $4
            RETURNING file_id`,
-          [parsed.id, auth.userId, tokenDigest(params.data.ticket)],
+          [parsed.id, auth.userId, tokenDigest(params.data.ticket), Date.now()],
         );
-        return result.rows[0] ?? null;
-      });
+      const ticketResult = result.rows[0] ?? null;
       if (!ticketResult) throw new AppError(404, "Download not found", "NOT_FOUND");
       const file = await findAuthorizedFile(auth, ticketResult.file_id);
       if (!file || file.status !== "AVAILABLE" || (file.expires_at && file.expires_at.getTime() <= Date.now())) {

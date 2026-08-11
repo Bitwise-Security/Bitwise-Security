@@ -9,6 +9,7 @@ $edgeRoot = Join-Path $portalRoot "apps\edge"
 $wrangler = Join-Path $portalRoot "node_modules\.bin\wrangler.cmd"
 $config = Join-Path $edgeRoot "wrangler.staging.jsonc"
 $bucketName = "bitwise-secure-portal-staging-files"
+$databaseName = "bitwise-secure-portal-staging-db"
 $workerName = "bitwise-secure-portal-staging"
 
 if (-not (Test-Path -LiteralPath $wrangler)) {
@@ -17,7 +18,6 @@ if (-not (Test-Path -LiteralPath $wrangler)) {
 
 $requiredVariables = @(
   "CLOUDFLARE_API_TOKEN",
-  "PORTAL_STAGING_DATABASE_URL",
   "PORTAL_STAGING_MFA_ENCRYPTION_KEY",
   "PORTAL_STAGING_SESSION_PEPPER",
   "PORTAL_STAGING_FILE_KEY_RING",
@@ -30,14 +30,6 @@ foreach ($variableName in $requiredVariables) {
   if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($variableName))) {
     throw "Required environment variable $variableName is missing."
   }
-}
-
-$databaseUri = [Uri][Environment]::GetEnvironmentVariable("PORTAL_STAGING_DATABASE_URL")
-if ($databaseUri.Scheme -notin @("postgres", "postgresql")) {
-  throw "PORTAL_STAGING_DATABASE_URL must be a PostgreSQL connection URL."
-}
-if (-not $databaseUri.Query.Contains("sslmode=verify-full")) {
-  throw "PORTAL_STAGING_DATABASE_URL must use sslmode=verify-full."
 }
 
 $keyRingText = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_FILE_KEY_RING")
@@ -59,8 +51,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Failed to create the dedicated staging R2 bucket." }
   }
 
+  & $wrangler d1 info $databaseName --config $config *> $null
+  if ($LASTEXITCODE -ne 0) {
+    throw "The dedicated staging D1 database $databaseName was not found; refusing to create or select a different database."
+  }
+
+  & $wrangler d1 migrations apply $databaseName --remote --config $config
+  if ($LASTEXITCODE -ne 0) { throw "Failed to migrate the dedicated staging D1 database." }
+
   $secrets = [ordered]@{
-    DATABASE_URL = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_DATABASE_URL")
     MFA_ENCRYPTION_KEY = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_MFA_ENCRYPTION_KEY")
     SESSION_PEPPER = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_SESSION_PEPPER")
     FILE_KEY_RING = $keyRingText
@@ -77,7 +76,7 @@ try {
   & $wrangler deploy --config $config
   if ($LASTEXITCODE -ne 0) { throw "Staging deployment failed." }
 
-  Write-Output "Deployed only $workerName with bucket $bucketName and portal-test.bitwise-security.nl."
+  Write-Output "Deployed only $workerName with D1 $databaseName, R2 $bucketName, and portal-test.bitwise-security.nl."
 }
 finally {
   Pop-Location

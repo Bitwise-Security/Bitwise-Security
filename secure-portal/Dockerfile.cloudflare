@@ -27,7 +27,6 @@ COPY apps/edge/package.json apps/edge/package.json
 RUN npm ci --omit=dev --workspace @bitwise-portal/api --include-workspace-root \
   && npm cache clean --force
 COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/apps/api/src/migrations ./apps/api/dist/migrations
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY cloudflare-entrypoint.sh /usr/local/bin/portal-entrypoint
 RUN chmod 0755 /usr/local/bin/portal-entrypoint \

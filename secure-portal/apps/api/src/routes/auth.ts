@@ -1,9 +1,9 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import QRCode from "qrcode";
 import { z } from "zod";
 import { getConfig } from "../config.js";
-import { getPool, withTransaction } from "../db.js";
+import { getPool } from "../db.js";
 import { AppError } from "../errors.js";
 import {
   decryptSecret,
@@ -16,10 +16,10 @@ import {
 import { passwordSchema } from "../security/password-policy.js";
 import {
   clearSessionCookie,
-  createSession,
   requireAuth,
   requireCsrf,
   rotateCsrfToken,
+  sessionInsertQuery,
   setSessionCookie,
 } from "../security/sessions.js";
 import {
@@ -27,7 +27,7 @@ import {
   makeOtpAuthUri,
   verifyTotp,
 } from "../security/totp.js";
-import { writeAuditEvent } from "../services/audit.js";
+import { auditEventQuery, writeAuditEvent } from "../services/audit.js";
 import { sendMail } from "../services/mail.js";
 
 const emailSchema = z.string().trim().email().max(320).transform((email) => email.toLowerCase());
@@ -83,14 +83,14 @@ async function recordLoginFailure(
     `UPDATE users
      SET failed_login_count = failed_login_count + 1,
          locked_until = CASE
-           WHEN failed_login_count + 1 >= 10 THEN now() + interval '24 hours'
-           WHEN failed_login_count + 1 >= 5 THEN now() + interval '15 minutes'
+           WHEN failed_login_count + 1 >= 10 THEN $2
+           WHEN failed_login_count + 1 >= 5 THEN $3
            ELSE locked_until
          END,
-         updated_at = now()
+         updated_at = $4
      WHERE id = $1
-     RETURNING locked_until IS NOT NULL AND locked_until > now() AS locked`,
-    [user.id],
+     RETURNING locked_until IS NOT NULL AND locked_until > $4 AS locked`,
+    [user.id, Date.now() + 86_400_000, Date.now() + 900_000, Date.now()],
   );
   await writeAuditEvent(request, {
     organizationId: user.organization_id,
@@ -99,7 +99,7 @@ async function recordLoginFailure(
     targetType: "USER",
     targetId: user.id,
     outcome: "FAILURE",
-    metadata: { reason: "INVALID_CREDENTIALS", accountLocked: result.rows[0]?.locked ?? false },
+    metadata: { reason: "INVALID_CREDENTIALS", accountLocked: Boolean(result.rows[0]?.locked) },
   });
 }
 
@@ -136,18 +136,13 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       }
 
       const challengeToken = randomToken();
-      await withTransaction(async (client) => {
-        await client.query(
-          `UPDATE users SET failed_login_count = 0, locked_until = NULL, updated_at = now()
-           WHERE id = $1`,
-          [user.id],
-        );
-        await client.query(
-          `INSERT INTO auth_challenges (user_id, token_digest, expires_at)
-           VALUES ($1, $2, now() + interval '5 minutes')`,
-          [user.id, tokenDigest(challengeToken)],
-        );
-      });
+      await getPool().batch([
+        { sql: `UPDATE users SET failed_login_count = 0, locked_until = NULL, updated_at = $2 WHERE id = $1`, params: [user.id, Date.now()] },
+        {
+          sql: `INSERT INTO auth_challenges (id, user_id, token_digest, expires_at) VALUES ($1, $2, $3, $4)`,
+          params: [randomUUID(), user.id, tokenDigest(challengeToken), Date.now() + 300_000],
+        },
+      ]);
       return reply.send({ mfaRequired: true, challengeToken });
     },
   );
@@ -157,8 +152,7 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     { config: { rateLimit: { max: 10, timeWindow: "5 minutes" } } },
     async (request, reply) => {
       const body = safeParse(mfaVerifySchema, request.body);
-      const outcome = await withTransaction(async (client) => {
-        const result = await client.query<{
+      const result = await getPool().query<{
           challenge_id: string;
           user_id: string;
           attempts: number;
@@ -178,12 +172,12 @@ export function registerAuthRoutes(app: FastifyInstance): void {
            JOIN organization_memberships om ON om.user_id = u.id
            WHERE c.token_digest = $1 AND c.consumed_at IS NULL
              AND c.expires_at > now()
-           FOR UPDATE OF c, m`,
+          `,
           [tokenDigest(body.challengeToken)],
         );
         const row = result.rows[0];
         if (!row || row.attempts >= 5) {
-          return null;
+          throw new AppError(401, "Invalid or expired verification code", "INVALID_MFA");
         }
 
         let authenticated = false;
@@ -196,10 +190,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
           authenticated = verification.valid;
           usedStep = verification.step;
         } else {
-          const recovery = await client.query<{ id: string }>(
+          const recovery = await getPool().query<{ id: string }>(
             `SELECT id FROM mfa_recovery_codes
              WHERE user_id = $1 AND code_hash = $2 AND consumed_at IS NULL
-             FOR UPDATE`,
+            `,
             [row.user_id, tokenDigest(body.code.toUpperCase())],
           );
           recoveryCodeId = recovery.rows[0]?.id;
@@ -207,13 +201,9 @@ export function registerAuthRoutes(app: FastifyInstance): void {
         }
 
         if (!authenticated) {
-          await client.query(
-            "UPDATE auth_challenges SET attempts = attempts + 1 WHERE id = $1",
-            [row.challenge_id],
-          );
-          await writeAuditEvent(
-            request,
-            {
+          await getPool().batch([
+            { sql: "UPDATE auth_challenges SET attempts = attempts + 1 WHERE id = $1 AND consumed_at IS NULL", params: [row.challenge_id] },
+            auditEventQuery(request, {
               organizationId: row.organization_id,
               actorUserId: row.user_id,
               action: "AUTH_MFA",
@@ -221,36 +211,41 @@ export function registerAuthRoutes(app: FastifyInstance): void {
               targetId: row.user_id,
               outcome: "FAILURE",
               metadata: { reason: "INVALID_CODE" },
-            },
-            client,
-          );
-          return null;
+            }),
+          ]);
+          throw new AppError(401, "Invalid or expired verification code", "INVALID_MFA");
         }
 
+        const now = Date.now();
+        const challengeClaim = await getPool().query(
+          `UPDATE auth_challenges SET consumed_at = $2
+           WHERE id = $1 AND consumed_at IS NULL AND expires_at > $2 AND attempts < 5
+           RETURNING id`,
+          [row.challenge_id, now],
+        );
+        if (!challengeClaim.rowCount) throw new AppError(401, "Invalid or expired verification code", "INVALID_MFA");
         if (usedStep != null) {
-          await client.query(
-            "UPDATE mfa_credentials SET last_used_step = $2 WHERE user_id = $1",
+          const claimedStep = await getPool().query(
+            `UPDATE mfa_credentials SET last_used_step = $2
+             WHERE user_id = $1 AND (last_used_step IS NULL OR last_used_step < $2)
+             RETURNING user_id`,
             [row.user_id, usedStep],
           );
+          if (!claimedStep.rowCount) throw new AppError(401, "Verification code was already used", "INVALID_MFA");
         }
         if (recoveryCodeId) {
-          await client.query(
-            "UPDATE mfa_recovery_codes SET consumed_at = now() WHERE id = $1",
-            [recoveryCodeId],
+          const claimedRecovery = await getPool().query(
+            `UPDATE mfa_recovery_codes SET consumed_at = $2
+             WHERE id = $1 AND consumed_at IS NULL RETURNING id`,
+            [recoveryCodeId, now],
           );
+          if (!claimedRecovery.rowCount) throw new AppError(401, "Recovery code was already used", "INVALID_MFA");
         }
-        await client.query(
-          "UPDATE auth_challenges SET consumed_at = now() WHERE id = $1",
-          [row.challenge_id],
-        );
-        await client.query(
-          "UPDATE users SET last_login_at = now(), updated_at = now() WHERE id = $1",
-          [row.user_id],
-        );
-        const session = await createSession(client, request, row.user_id);
-        await writeAuditEvent(
-          request,
-          {
+        const session = sessionInsertQuery(request, row.user_id);
+        await getPool().batch([
+          { sql: "UPDATE users SET last_login_at = $2, updated_at = $2 WHERE id = $1", params: [row.user_id, now] },
+          session.query,
+          auditEventQuery(request, {
             organizationId: row.organization_id,
             actorUserId: row.user_id,
             action: "AUTH_LOGIN",
@@ -258,15 +253,9 @@ export function registerAuthRoutes(app: FastifyInstance): void {
             targetId: row.user_id,
             outcome: "SUCCESS",
             metadata: { method: recoveryCodeId ? "RECOVERY_CODE" : "TOTP" },
-          },
-          client,
-        );
-        return { ...row, ...session };
-      });
-
-      if (!outcome) {
-        throw new AppError(401, "Invalid or expired verification code", "INVALID_MFA");
-      }
+          }),
+        ]);
+      const outcome = { ...row, sessionToken: session.sessionToken, csrfToken: session.csrfToken };
       setSessionCookie(reply, outcome.sessionToken);
       return reply.send({
         csrfToken: outcome.csrfToken,
@@ -288,37 +277,39 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       const passwordHash = await hashPassword(body.password);
       const secret = generateTotpSecret();
       const enrollmentToken = randomToken();
-      const accepted = await withTransaction(async (client) => {
-        const result = await client.query<{ invitation_id: string; user_id: string }>(
+      const result = await getPool().query<{ invitation_id: string; user_id: string }>(
           `SELECT i.id AS invitation_id, i.user_id
            FROM client_invitations i
            JOIN users u ON u.id = i.user_id AND u.status = 'INVITED'
            WHERE i.token_digest = $1 AND i.accepted_at IS NULL AND i.revoked_at IS NULL
-             AND i.expires_at > now()
-           FOR UPDATE OF i, u`,
-          [tokenDigest(body.token)],
+             AND i.expires_at > $2
+             AND (i.enrollment_started_at IS NULL OR i.enrollment_started_at < $3)`,
+          [tokenDigest(body.token), Date.now(), Date.now() - 1_800_000],
         );
         const invitation = result.rows[0];
-        if (!invitation) return null;
-        await client.query(
-          `UPDATE users SET display_name = $2, password_hash = $3,
-             status = 'PENDING_MFA', updated_at = now() WHERE id = $1`,
-          [invitation.user_id, body.displayName, passwordHash],
-        );
-        await client.query(
-          `INSERT INTO mfa_enrollment_sessions
-             (user_id, invitation_id, token_digest, encrypted_secret, expires_at)
-           VALUES ($1, $2, $3, $4, now() + interval '30 minutes')`,
-          [
-            invitation.user_id,
-            invitation.invitation_id,
-            tokenDigest(enrollmentToken),
-            encryptSecret(secret),
-          ],
-        );
-        return invitation;
-      });
-      if (!accepted) throw new AppError(400, "Invitation is invalid or expired", "INVALID_INVITATION");
+      if (!invitation) throw new AppError(400, "Invitation is invalid or expired", "INVALID_INVITATION");
+      const now = Date.now();
+      const claimed = await getPool().query(
+        `UPDATE client_invitations SET enrollment_started_at = $2
+         WHERE id = $1 AND accepted_at IS NULL AND revoked_at IS NULL
+           AND (enrollment_started_at IS NULL OR enrollment_started_at < $3)
+         RETURNING id`,
+        [invitation.invitation_id, now, now - 1_800_000],
+      );
+      if (!claimed.rowCount) throw new AppError(400, "Invitation is invalid or expired", "INVALID_INVITATION");
+      await getPool().batch([
+        {
+          sql: `UPDATE users SET display_name = $2, password_hash = $3,
+                  status = 'PENDING_MFA', updated_at = $4 WHERE id = $1`,
+          params: [invitation.user_id, body.displayName, passwordHash, now],
+        },
+        {
+          sql: `INSERT INTO mfa_enrollment_sessions
+                  (id, user_id, invitation_id, token_digest, encrypted_secret, expires_at)
+                VALUES ($1, $2, $3, $4, $5, $6)`,
+          params: [randomUUID(), invitation.user_id, invitation.invitation_id, tokenDigest(enrollmentToken), encryptSecret(secret), now + 1_800_000],
+        },
+      ]);
       return reply.send({ enrollmentToken });
     },
   );
@@ -357,8 +348,7 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     async (request, reply) => {
       const body = safeParse(enrollmentConfirmSchema, request.body);
       const codes = recoveryCodes();
-      const result = await withTransaction(async (client) => {
-        const enrollmentResult = await client.query<{
+      const enrollmentResult = await getPool().query<{
           enrollment_id: string;
           user_id: string;
           invitation_id: string | null;
@@ -377,74 +367,61 @@ export function registerAuthRoutes(app: FastifyInstance): void {
            JOIN users u ON u.id = e.user_id AND u.status = 'PENDING_MFA'
            JOIN organization_memberships om ON om.user_id = u.id
            WHERE e.token_digest = $1 AND e.consumed_at IS NULL
-             AND e.expires_at > now()
-           FOR UPDATE OF e, u`,
-          [tokenDigest(body.enrollmentToken)],
+             AND e.expires_at > $2`,
+          [tokenDigest(body.enrollmentToken), Date.now()],
         );
         const enrollment = enrollmentResult.rows[0];
-        if (!enrollment || enrollment.attempts >= 5) return null;
+        if (!enrollment || enrollment.attempts >= 5) throw new AppError(400, "Invalid or expired verification code", "INVALID_MFA");
         if (!enrollment.password_hash || !(await verifyPassword(enrollment.password_hash, body.password))) {
-          await client.query(
+          await getPool().query(
             "UPDATE mfa_enrollment_sessions SET attempts = attempts + 1 WHERE id = $1",
             [enrollment.enrollment_id],
           );
-          return null;
+          throw new AppError(400, "Invalid or expired verification code", "INVALID_MFA");
         }
         const verification = verifyTotp(decryptSecret(enrollment.encrypted_secret), body.code);
         if (!verification.valid || verification.step == null) {
-          await client.query(
+          await getPool().query(
             "UPDATE mfa_enrollment_sessions SET attempts = attempts + 1 WHERE id = $1",
             [enrollment.enrollment_id],
           );
-          return null;
+          throw new AppError(400, "Invalid or expired verification code", "INVALID_MFA");
         }
-        await client.query(
-          `INSERT INTO mfa_credentials
-             (user_id, encrypted_secret, last_used_step, confirmed_at)
-           VALUES ($1, $2, $3, now())
-           ON CONFLICT (user_id) DO UPDATE SET
-             encrypted_secret = EXCLUDED.encrypted_secret,
-             last_used_step = EXCLUDED.last_used_step,
-             confirmed_at = now()`,
-          [enrollment.user_id, enrollment.encrypted_secret, verification.step],
+        const now = Date.now();
+        const claimed = await getPool().query(
+          `UPDATE mfa_enrollment_sessions SET consumed_at = $2
+           WHERE id = $1 AND consumed_at IS NULL AND expires_at > $2 AND attempts < 5
+           RETURNING id`,
+          [enrollment.enrollment_id, now],
         );
-        await client.query("DELETE FROM mfa_recovery_codes WHERE user_id = $1", [enrollment.user_id]);
-        for (const code of codes) {
-          await client.query(
-            "INSERT INTO mfa_recovery_codes (user_id, code_hash) VALUES ($1, $2)",
-            [enrollment.user_id, tokenDigest(code)],
-          );
-        }
-        await client.query(
-          "UPDATE users SET status = 'ACTIVE', updated_at = now() WHERE id = $1",
-          [enrollment.user_id],
-        );
-        await client.query(
-          "UPDATE mfa_enrollment_sessions SET consumed_at = now() WHERE id = $1",
-          [enrollment.enrollment_id],
-        );
-        if (enrollment.invitation_id) {
-          await client.query(
-            "UPDATE client_invitations SET accepted_at = now() WHERE id = $1",
-            [enrollment.invitation_id],
-          );
-        }
-        const session = await createSession(client, request, enrollment.user_id);
-        await writeAuditEvent(
-          request,
+        if (!claimed.rowCount) throw new AppError(400, "Invalid or expired verification code", "INVALID_MFA");
+        const session = sessionInsertQuery(request, enrollment.user_id);
+        await getPool().batch([
           {
+            sql: `INSERT INTO mfa_credentials (user_id, encrypted_secret, last_used_step, confirmed_at)
+                  VALUES ($1, $2, $3, $4)
+                  ON CONFLICT (user_id) DO UPDATE SET encrypted_secret = excluded.encrypted_secret,
+                    last_used_step = excluded.last_used_step, confirmed_at = excluded.confirmed_at`,
+            params: [enrollment.user_id, enrollment.encrypted_secret, verification.step, now],
+          },
+          { sql: "DELETE FROM mfa_recovery_codes WHERE user_id = $1", params: [enrollment.user_id] },
+          ...codes.map((code) => ({
+            sql: "INSERT INTO mfa_recovery_codes (id, user_id, code_hash) VALUES ($1, $2, $3)",
+            params: [randomUUID(), enrollment.user_id, tokenDigest(code)],
+          })),
+          { sql: "UPDATE users SET status = 'ACTIVE', updated_at = $2 WHERE id = $1", params: [enrollment.user_id, now] },
+          ...(enrollment.invitation_id ? [{ sql: "UPDATE client_invitations SET accepted_at = $2 WHERE id = $1", params: [enrollment.invitation_id, now] }] : []),
+          session.query,
+          auditEventQuery(request, {
             organizationId: enrollment.organization_id,
             actorUserId: enrollment.user_id,
             action: "AUTH_MFA_ENROLLED",
             targetType: "USER",
             targetId: enrollment.user_id,
             outcome: "SUCCESS",
-          },
-          client,
-        );
-        return { ...enrollment, ...session };
-      });
-      if (!result) throw new AppError(400, "Invalid or expired verification code", "INVALID_MFA");
+          }),
+        ]);
+      const result = { ...enrollment, sessionToken: session.sessionToken, csrfToken: session.csrfToken };
       setSessionCookie(reply, result.sessionToken);
       return reply.send({
         csrfToken: result.csrfToken,
@@ -471,17 +448,18 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       const user = result.rows[0];
       if (user) {
         const token = randomToken();
-        await withTransaction(async (client) => {
-          await client.query(
-            "UPDATE password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL",
-            [user.id],
-          );
-          await client.query(
-            `INSERT INTO password_reset_tokens (user_id, token_digest, expires_at)
-             VALUES ($1, $2, now() + ($3 * interval '1 minute'))`,
-            [user.id, tokenDigest(token), getConfig().PASSWORD_RESET_MINUTES],
-          );
-        });
+        const now = Date.now();
+        await getPool().batch([
+          {
+            sql: "UPDATE password_reset_tokens SET consumed_at = $2 WHERE user_id = $1 AND consumed_at IS NULL",
+            params: [user.id, now],
+          },
+          {
+            sql: `INSERT INTO password_reset_tokens (id, user_id, token_digest, expires_at)
+                  VALUES ($1, $2, $3, $4)`,
+            params: [randomUUID(), user.id, tokenDigest(token), now + getConfig().PASSWORD_RESET_MINUTES * 60_000],
+          },
+        ]);
         const url = `${getConfig().PUBLIC_ORIGIN}/reset-password#token=${encodeURIComponent(token)}`;
         try {
           await sendMail({
@@ -512,41 +490,43 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     async (request, reply) => {
       const body = safeParse(resetConfirmSchema, request.body);
       const passwordHash = await hashPassword(body.password);
-      const reset = await withTransaction(async (client) => {
-        const result = await client.query<{ id: string; user_id: string; organization_id: string }>(
-          `SELECT p.id, p.user_id, om.organization_id
-           FROM password_reset_tokens p
-           JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'
-           JOIN organization_memberships om ON om.user_id = u.id
-           WHERE p.token_digest = $1 AND p.consumed_at IS NULL AND p.expires_at > now()
-           FOR UPDATE OF p, u`,
-          [tokenDigest(body.token)],
-        );
-        const row = result.rows[0];
-        if (!row) return null;
-        await client.query(
-          `UPDATE users SET password_hash = $2, failed_login_count = 0,
-             locked_until = NULL, updated_at = now() WHERE id = $1`,
-          [row.user_id, passwordHash],
-        );
-        await client.query("UPDATE password_reset_tokens SET consumed_at = now() WHERE id = $1", [row.id]);
-        await client.query("UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL", [row.user_id]);
-        await writeAuditEvent(
-          request,
-          {
-            organizationId: row.organization_id,
-            actorUserId: row.user_id,
-            action: "AUTH_PASSWORD_RESET",
-            targetType: "USER",
-            targetId: row.user_id,
-            outcome: "SUCCESS",
-            metadata: { sessionsRevoked: true, mfaPreserved: true },
-          },
-          client,
-        );
-        return row;
-      });
+      const now = Date.now();
+      const result = await getPool().query<{ id: string; user_id: string; organization_id: string }>(
+        `SELECT p.id, p.user_id, om.organization_id
+         FROM password_reset_tokens p
+         JOIN users u ON u.id = p.user_id AND u.status = 'ACTIVE'
+         JOIN organization_memberships om ON om.user_id = u.id
+         WHERE p.token_digest = $1 AND p.consumed_at IS NULL AND p.expires_at > $2`,
+        [tokenDigest(body.token), now],
+      );
+      const reset = result.rows[0];
       if (!reset) throw new AppError(400, "Reset link is invalid or expired", "INVALID_RESET");
+      const claim = await getPool().query(
+        `UPDATE password_reset_tokens SET consumed_at = $2
+         WHERE id = $1 AND consumed_at IS NULL AND expires_at > $2 RETURNING id`,
+        [reset.id, now],
+      );
+      if (!claim.rowCount) throw new AppError(400, "Reset link is invalid or expired", "INVALID_RESET");
+      await getPool().batch([
+        {
+          sql: `UPDATE users SET password_hash = $2, failed_login_count = 0,
+                locked_until = NULL, updated_at = $3 WHERE id = $1`,
+          params: [reset.user_id, passwordHash, now],
+        },
+        {
+          sql: "UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL",
+          params: [reset.user_id, now],
+        },
+        auditEventQuery(request, {
+          organizationId: reset.organization_id,
+          actorUserId: reset.user_id,
+          action: "AUTH_PASSWORD_RESET",
+          targetType: "USER",
+          targetId: reset.user_id,
+          outcome: "SUCCESS",
+          metadata: { sessionsRevoked: true, mfaPreserved: true },
+        }),
+      ]);
       clearSessionCookie(reply);
       return reply.send({ message: "Password updated. Sign in using your password and MFA code." });
     },

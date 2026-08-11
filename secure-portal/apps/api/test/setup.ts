@@ -1,7 +1,7 @@
 process.env.NODE_ENV = "test";
 process.env.PORT = "4100";
 process.env.PUBLIC_ORIGIN = "http://localhost:4100";
-process.env.DATABASE_URL = "postgresql://portal:test@localhost:5432/portal_test";
+process.env.D1_BINDING_ORIGIN = "http://portal-db.internal";
 process.env.REDIS_URL = "redis://localhost:6379";
 process.env.MFA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
 process.env.SESSION_PEPPER = "test-session-pepper-that-is-at-least-thirty-two-characters";

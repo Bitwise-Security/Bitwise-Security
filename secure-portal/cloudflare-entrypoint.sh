@@ -19,7 +19,6 @@ clamd_pid=$!
 
 clamdscan --ping 60:1 --quiet
 
-gosu node node apps/api/dist/scripts/migrate.js
 gosu node node apps/api/dist/scripts/bootstrap-admin.js
 gosu node node apps/api/dist/worker.js &
 worker_pid=$!

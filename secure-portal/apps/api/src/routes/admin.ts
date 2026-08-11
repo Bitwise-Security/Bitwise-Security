@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getConfig } from "../config.js";
-import { getPool, withTransaction } from "../db.js";
+import { getPool } from "../db.js";
 import { AppError } from "../errors.js";
 import { encryptSecret, randomToken, tokenDigest } from "../security/crypto.js";
 import { requireAdmin, requireCsrf } from "../security/sessions.js";
 import { generateTotpSecret } from "../security/totp.js";
-import { writeAuditEvent } from "../services/audit.js";
+import { auditEventQuery, writeAuditEvent } from "../services/audit.js";
 import { sendMail } from "../services/mail.js";
 
 const inviteSchema = z.object({
@@ -37,10 +38,10 @@ export function registerAdminRoutes(app: FastifyInstance): void {
          FROM audit_events ae
          LEFT JOIN users actor ON actor.id = ae.actor_user_id
          WHERE ae.organization_id = $1
-           AND ($2::timestamptz IS NULL OR ae.created_at < $2)
+           AND ($2 IS NULL OR ae.created_at < $2)
          ORDER BY ae.created_at DESC, ae.id DESC
          LIMIT $3`,
-        [auth.organizationId, query.data.before ?? null, query.data.limit],
+        [auth.organizationId, query.data.before ? new Date(query.data.before).getTime() : null, query.data.limit],
       );
       return { events: result.rows };
     },
@@ -79,58 +80,33 @@ export function registerAdminRoutes(app: FastifyInstance): void {
       const invitationToken = randomToken();
       let invited: { userId: string; invitationId: string };
       try {
-        invited = await withTransaction(async (client) => {
-          const userResult = await client.query<{ id: string }>(
-            `INSERT INTO users (email, display_name, status)
-             VALUES ($1, $2, 'INVITED') RETURNING id`,
-            [parsed.data.email, parsed.data.displayName],
-          );
-          const userId = userResult.rows[0]!.id;
-          const spaceResult = await client.query<{ id: string }>(
-            `INSERT INTO client_spaces (organization_id, name)
-             VALUES ($1, $2) RETURNING id`,
-            [auth.organizationId, parsed.data.spaceName],
-          );
-          const spaceId = spaceResult.rows[0]!.id;
-          await client.query(
-            `INSERT INTO organization_memberships (organization_id, user_id, role)
-             VALUES ($1, $2, 'CLIENT')`,
-            [auth.organizationId, userId],
-          );
-          await client.query(
-            "INSERT INTO space_memberships (space_id, user_id) VALUES ($1, $2)",
-            [spaceId, userId],
-          );
-          const invitationResult = await client.query<{ id: string }>(
-            `INSERT INTO client_invitations
-               (organization_id, space_id, user_id, invited_by, token_digest, expires_at)
-             VALUES ($1, $2, $3, $4, $5,
-               now() + ($6 * interval '1 hour')) RETURNING id`,
-            [
-              auth.organizationId,
-              spaceId,
-              userId,
-              auth.userId,
-              tokenDigest(invitationToken),
-              getConfig().INVITATION_EXPIRY_HOURS,
-            ],
-          );
-          await writeAuditEvent(
-            request,
-            {
-              organizationId: auth.organizationId,
-              actorUserId: auth.userId,
-              action: "CLIENT_INVITED",
-              targetType: "USER",
-              targetId: userId,
-              outcome: "SUCCESS",
-            },
-            client,
-          );
-          return { userId, invitationId: invitationResult.rows[0]!.id };
-        });
+        const userId = randomUUID();
+        const spaceId = randomUUID();
+        const invitationId = randomUUID();
+        await getPool().batch([
+          { sql: `INSERT INTO users (id, email, display_name, status) VALUES ($1, $2, $3, 'INVITED')`, params: [userId, parsed.data.email, parsed.data.displayName] },
+          { sql: `INSERT INTO client_spaces (id, organization_id, name) VALUES ($1, $2, $3)`, params: [spaceId, auth.organizationId, parsed.data.spaceName] },
+          { sql: `INSERT INTO organization_memberships (organization_id, user_id, role) VALUES ($1, $2, 'CLIENT')`, params: [auth.organizationId, userId] },
+          { sql: `INSERT INTO space_memberships (space_id, user_id) VALUES ($1, $2)`, params: [spaceId, userId] },
+          {
+            sql: `INSERT INTO client_invitations
+                    (id, organization_id, space_id, user_id, invited_by, token_digest, expires_at)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            params: [invitationId, auth.organizationId, spaceId, userId, auth.userId, tokenDigest(invitationToken), Date.now() + getConfig().INVITATION_EXPIRY_HOURS * 3_600_000],
+          },
+          auditEventQuery(request, {
+            organizationId: auth.organizationId,
+            actorUserId: auth.userId,
+            action: "CLIENT_INVITED",
+            targetType: "USER",
+            targetId: userId,
+            outcome: "SUCCESS",
+          }),
+        ]);
+        invited = { userId, invitationId };
       } catch (error) {
-        if ((error as { code?: string }).code === "23505") {
+        const duplicate = await getPool().query("SELECT 1 FROM users WHERE email = $1", [parsed.data.email]);
+        if (duplicate.rowCount) {
           throw new AppError(409, "A client with this email already exists", "EMAIL_EXISTS");
         }
         throw error;
@@ -167,38 +143,25 @@ export function registerAdminRoutes(app: FastifyInstance): void {
       const body = statusSchema.safeParse(request.body);
       if (!params.success || !body.success) throw new AppError(400, "Invalid request", "INVALID_REQUEST");
       const auth = request.auth!;
-      const result = await withTransaction(async (client) => {
-        const updated = await client.query<{ id: string }>(
-          `UPDATE users u SET status = $3, updated_at = now()
-           FROM organization_memberships om
-           WHERE u.id = $2 AND om.user_id = u.id AND om.organization_id = $1
-             AND om.role = 'CLIENT'
-           RETURNING u.id`,
-          [auth.organizationId, params.data.userId, body.data.status],
-        );
-        if (updated.rowCount !== 1) return false;
-        if (body.data.status === "DISABLED") {
-          await client.query(
-            "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL",
-            [params.data.userId],
-          );
-        }
-        await writeAuditEvent(
-          request,
-          {
-            organizationId: auth.organizationId,
-            actorUserId: auth.userId,
-            action: "CLIENT_STATUS_CHANGED",
-            targetType: "USER",
-            targetId: params.data.userId,
-            outcome: "SUCCESS",
-            metadata: { status: body.data.status },
-          },
-          client,
-        );
-        return true;
-      });
-      if (!result) throw new AppError(404, "Client not found", "NOT_FOUND");
+      const target = await getPool().query(
+        `SELECT 1 FROM organization_memberships
+         WHERE organization_id = $1 AND user_id = $2 AND role = 'CLIENT'`,
+        [auth.organizationId, params.data.userId],
+      );
+      if (!target.rowCount) throw new AppError(404, "Client not found", "NOT_FOUND");
+      await getPool().batch([
+        { sql: `UPDATE users SET status = $2, updated_at = $3 WHERE id = $1`, params: [params.data.userId, body.data.status, Date.now()] },
+        ...(body.data.status === "DISABLED" ? [{ sql: `UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`, params: [params.data.userId, Date.now()] }] : []),
+        auditEventQuery(request, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: "CLIENT_STATUS_CHANGED",
+          targetType: "USER",
+          targetId: params.data.userId,
+          outcome: "SUCCESS",
+          metadata: { status: body.data.status },
+        }),
+      ]);
       return reply.code(204).send();
     },
   );
@@ -212,47 +175,42 @@ export function registerAdminRoutes(app: FastifyInstance): void {
       const auth = request.auth!;
       const enrollmentToken = randomToken();
       const secret = generateTotpSecret();
-      const result = await withTransaction(async (client) => {
-        const target = await client.query<{ id: string; email: string }>(
+      const target = await getPool().query<{ id: string; email: string }>(
           `SELECT u.id, u.email::text
            FROM users u JOIN organization_memberships om ON om.user_id = u.id
            WHERE u.id = $2 AND om.organization_id = $1 AND om.role = 'CLIENT'
              AND u.status IN ('ACTIVE', 'PENDING_MFA')
-           FOR UPDATE OF u`,
+          `,
           [auth.organizationId, params.data.userId],
         );
-        const user = target.rows[0];
-        if (!user) return null;
-        await client.query("DELETE FROM mfa_credentials WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM mfa_recovery_codes WHERE user_id = $1", [user.id]);
-        await client.query("UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL", [user.id]);
-        await client.query("UPDATE users SET status = 'PENDING_MFA', updated_at = now() WHERE id = $1", [user.id]);
-        await client.query(
-          `INSERT INTO mfa_enrollment_sessions
-             (user_id, token_digest, encrypted_secret, expires_at)
-           VALUES ($1, $2, $3, now() + interval '30 minutes')`,
-          [user.id, tokenDigest(enrollmentToken), encryptSecret(secret)],
-        );
-        await writeAuditEvent(
-          request,
-          {
-            organizationId: auth.organizationId,
-            actorUserId: auth.userId,
-            action: "CLIENT_MFA_RESET",
-            targetType: "USER",
-            targetId: user.id,
-            outcome: "SUCCESS",
-            metadata: { sessionsRevoked: true },
-          },
-          client,
-        );
-        return user;
-      });
-      if (!result) throw new AppError(404, "Client not found", "NOT_FOUND");
+      const user = target.rows[0];
+      if (!user) throw new AppError(404, "Client not found", "NOT_FOUND");
+      const now = Date.now();
+      await getPool().batch([
+        { sql: `DELETE FROM mfa_credentials WHERE user_id = $1`, params: [user.id] },
+        { sql: `DELETE FROM mfa_recovery_codes WHERE user_id = $1`, params: [user.id] },
+        { sql: `UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`, params: [user.id, now] },
+        { sql: `UPDATE mfa_enrollment_sessions SET consumed_at = $2 WHERE user_id = $1 AND consumed_at IS NULL`, params: [user.id, now] },
+        { sql: `UPDATE users SET status = 'PENDING_MFA', updated_at = $2 WHERE id = $1`, params: [user.id, now] },
+        {
+          sql: `INSERT INTO mfa_enrollment_sessions (id, user_id, token_digest, encrypted_secret, expires_at)
+                VALUES ($1, $2, $3, $4, $5)`,
+          params: [randomUUID(), user.id, tokenDigest(enrollmentToken), encryptSecret(secret), now + 1_800_000],
+        },
+        auditEventQuery(request, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: "CLIENT_MFA_RESET",
+          targetType: "USER",
+          targetId: user.id,
+          outcome: "SUCCESS",
+          metadata: { sessionsRevoked: true },
+        }),
+      ]);
       const url = `${getConfig().PUBLIC_ORIGIN}/enrol-mfa#token=${encodeURIComponent(enrollmentToken)}`;
       try {
         await sendMail({
-          to: result.email,
+          to: user.email,
           subject: "Set up MFA again for Bitwise Secure Portal",
           text: `An administrator reset MFA for your account after an identity-verification request.\n\nSet up MFA within 30 minutes:\n${url}\n\nIf you did not request this, contact Bitwise Security by phone.`,
         });

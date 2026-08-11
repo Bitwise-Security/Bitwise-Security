@@ -1,5 +1,5 @@
 import { Container, ContainerProxy } from "@cloudflare/containers";
-import { DurableObject, env } from "cloudflare:workers";
+import { DurableObject } from "cloudflare:workers";
 import { nextRateState, ratePolicyFor } from "./rate-limit.js";
 import type { RateState } from "./rate-limit.js";
 
@@ -7,7 +7,17 @@ export { ContainerProxy };
 
 const CONTAINER_NAME = "bitwise-secure-portal-staging-api";
 const R2_VIRTUAL_HOST = "portal-files.internal";
+const D1_VIRTUAL_HOST = "portal-db.internal";
 const STORAGE_KEY = /^[a-zA-Z0-9_-]{16,100}$/u;
+
+interface D1QueryInput {
+  sql: string;
+  params: unknown[];
+}
+
+interface EncodedBinary {
+  __portalBinary: string;
+}
 
 function json(value: unknown, status = 200, extraHeaders?: HeadersInit): Response {
   const headers = new Headers(extraHeaders);
@@ -123,6 +133,66 @@ async function r2BindingHandler(request: Request, bindings: Cloudflare.Env): Pro
   return new Response(null, { status: 404 });
 }
 
+function isEncodedBinary(value: unknown): value is EncodedBinary {
+  return typeof value === "object" && value !== null &&
+    "__portalBinary" in value && typeof value.__portalBinary === "string";
+}
+
+function decodeD1Parameter(value: unknown): string | number | null | ArrayBuffer {
+  if (!isEncodedBinary(value)) {
+    if (value === null || typeof value === "string" || typeof value === "number") return value;
+    throw new Error("Invalid D1 parameter type");
+  }
+  const binary = Uint8Array.from(atob(value.__portalBinary), (character) => character.charCodeAt(0));
+  return binary.buffer;
+}
+
+function encodeD1Value(value: unknown): unknown {
+  if (value instanceof ArrayBuffer) {
+    const bytes = new Uint8Array(value);
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return { __portalBinary: btoa(binary) } satisfies EncodedBinary;
+  }
+  return value;
+}
+
+function isD1QueryInput(value: unknown): value is D1QueryInput {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.sql === "string" && candidate.sql.length > 0 && candidate.sql.length <= 50_000 &&
+    Array.isArray(candidate.params) && candidate.params.length <= 200;
+}
+
+async function d1BindingHandler(request: Request, bindings: Cloudflare.Env): Promise<Response> {
+  if (request.method !== "POST" || new URL(request.url).pathname !== "/batch") {
+    return json({ error: "Database operation denied" }, 403);
+  }
+  try {
+    const body: unknown = await request.json();
+    if (!Array.isArray(body) || body.length < 1 || body.length > 100 || !body.every(isD1QueryInput)) {
+      return json({ error: "Invalid database batch" }, 400);
+    }
+    const statements = body.map((query) => bindings.PORTAL_DB
+      .prepare(query.sql)
+      .bind(...query.params.map(decodeD1Parameter)));
+    const results = statements.length === 1
+      ? [await statements[0]!.all()]
+      : await bindings.PORTAL_DB.batch(statements);
+    return json({
+      results: results.map((result) => ({
+        rows: result.results.map((row) => Object.fromEntries(
+          Object.entries(row as Record<string, unknown>).map(([key, value]) => [key, encodeD1Value(value)]),
+        )),
+        changes: result.meta.changes ?? 0,
+      })),
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "d1_binding_error", error: error instanceof Error ? error.message : "unknown" }));
+    return json({ error: "Database operation failed" }, 502);
+  }
+}
+
 async function resendEgressHandler(request: Request, bindings: Cloudflare.Env): Promise<Response> {
   const url = new URL(request.url);
   if (request.method !== "POST" || url.pathname !== "/emails") {
@@ -142,39 +212,40 @@ export class PortalContainer extends Container<Cloudflare.Env> {
   override interceptHttps = true;
   override allowedHosts = [
     R2_VIRTUAL_HOST,
+    D1_VIRTUAL_HOST,
     "api.resend.com",
     "database.clamav.net",
     "*.clamav.net",
-    new URL(env.DATABASE_URL).hostname,
   ];
   override envVars = {
     NODE_ENV: "production",
     PORT: "4100",
-    PUBLIC_ORIGIN: env.PUBLIC_ORIGIN,
-    DATABASE_URL: env.DATABASE_URL,
+    PUBLIC_ORIGIN: this.env.PUBLIC_ORIGIN,
+    D1_BINDING_ORIGIN: `http://${D1_VIRTUAL_HOST}`,
     REDIS_URL: "redis://127.0.0.1:6379",
     RATE_LIMIT_BACKEND: "memory",
     TRUSTED_EDGE_GATEWAY: "true",
-    MFA_ENCRYPTION_KEY: env.MFA_ENCRYPTION_KEY,
-    SESSION_PEPPER: env.SESSION_PEPPER,
+    MFA_ENCRYPTION_KEY: this.env.MFA_ENCRYPTION_KEY,
+    SESSION_PEPPER: this.env.SESSION_PEPPER,
     SMTP_HOST: "127.0.0.1",
-    EMAIL_FROM: env.EMAIL_FROM,
+    EMAIL_FROM: this.env.EMAIL_FROM,
     EMAIL_PROVIDER: "resend",
     RESEND_API_KEY: "injected-by-cloudflare-egress",
     STORAGE_MODE: "r2-binding",
     R2_BINDING_ORIGIN: `http://${R2_VIRTUAL_HOST}`,
     FILE_KEY_PROVIDER: "cloudflare-secret",
-    FILE_KEY_RING: env.FILE_KEY_RING,
+    FILE_KEY_RING: this.env.FILE_KEY_RING,
     SCANNER_MODE: "clamav",
     CLAMAV_HOST: "127.0.0.1",
     CLAMAV_PORT: "3310",
-    BOOTSTRAP_ADMIN_EMAIL: env.BOOTSTRAP_ADMIN_EMAIL ?? "",
-    BOOTSTRAP_ADMIN_PASSWORD: env.BOOTSTRAP_ADMIN_PASSWORD ?? "",
+    BOOTSTRAP_ADMIN_EMAIL: this.env.BOOTSTRAP_ADMIN_EMAIL ?? "",
+    BOOTSTRAP_ADMIN_PASSWORD: this.env.BOOTSTRAP_ADMIN_PASSWORD ?? "",
   };
 }
 
 PortalContainer.outboundByHost = {
   [R2_VIRTUAL_HOST]: r2BindingHandler,
+  [D1_VIRTUAL_HOST]: d1BindingHandler,
   "api.resend.com": resendEgressHandler,
 };
 

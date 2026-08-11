@@ -30,6 +30,14 @@
       "bucket_name": "bitwise-secure-portal-staging-files"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "PORTAL_DB",
+      "database_name": "bitwise-secure-portal-staging-db",
+      "database_id": "2751c532-68f9-4ffc-988e-bb7e3afaf935",
+      "migrations_dir": "migrations"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {
