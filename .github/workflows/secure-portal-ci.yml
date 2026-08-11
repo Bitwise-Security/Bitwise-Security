@@ -1,0 +1,38 @@
+name: Secure portal CI
+
+on:
+  pull_request:
+    paths:
+      - "secure-portal/**"
+      - ".github/workflows/secure-portal-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "secure-portal/**"
+      - ".github/workflows/secure-portal-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: secure-portal
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.17.0
+          cache: npm
+          cache-dependency-path: secure-portal/package-lock.json
+      - run: npm ci
+      - run: npm run cf:types
+      - run: git diff --exit-code -- apps/edge/worker-configuration.d.ts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --omit=dev
+      - run: docker build --file Dockerfile.cloudflare --tag bitwise-secure-portal-ci .

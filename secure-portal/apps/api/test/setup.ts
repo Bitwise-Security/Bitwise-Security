@@ -1,0 +1,17 @@
+process.env.NODE_ENV = "test";
+process.env.PORT = "4100";
+process.env.PUBLIC_ORIGIN = "http://localhost:4100";
+process.env.DATABASE_URL = "postgresql://portal:test@localhost:5432/portal_test";
+process.env.REDIS_URL = "redis://localhost:6379";
+process.env.MFA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+process.env.SESSION_PEPPER = "test-session-pepper-that-is-at-least-thirty-two-characters";
+process.env.SMTP_HOST = "localhost";
+process.env.SMTP_PORT = "1025";
+process.env.SMTP_SECURE = "false";
+process.env.EMAIL_FROM = "Portal Test <portal@example.test>";
+process.env.EMAIL_PROVIDER = "smtp";
+process.env.STORAGE_MODE = "local";
+process.env.LOCAL_STORAGE_PATH = "./data/test-files";
+process.env.FILE_KEY_PROVIDER = "local";
+process.env.FILE_KEY_ENCRYPTION_KEY = "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=";
+process.env.SCANNER_MODE = "stub";

@@ -1,0 +1,26 @@
+{
+  "name": "@bitwise-portal/edge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test --max-warnings=0",
+    "test": "vitest run --coverage.enabled=false",
+    "cf:types": "wrangler types --config wrangler.staging.jsonc worker-configuration.d.ts",
+    "cf:check": "wrangler deploy --dry-run --containers-rollout=none --config wrangler.staging.jsonc",
+    "cf:dev": "wrangler dev --config wrangler.staging.jsonc",
+    "cf:deploy:staging": "wrangler deploy --config wrangler.staging.jsonc"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
+  },
+  "devDependencies": {
+    "eslint": "10.8.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.10",
+    "wrangler": "4.120.1"
+  }
+}
