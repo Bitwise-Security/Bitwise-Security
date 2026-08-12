@@ -59,24 +59,30 @@ function AuditPanel() {
     return () => { active = false; };
   }, [page]);
   return (
-    <section className="card audit-card">
-      <div className="card-heading">
-        <div><p className="eyebrow">SECURITY RECORD</p><h2>Recent audit activity</h2></div>
-        <button className="secondary-button small" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Refreshing…" : "Refresh"}</button>
+    <section className="portal-section" id="security">
+      <div className="section-heading">
+        <div><p className="eyebrow">SECURITY & ACCOUNTABILITY</p><h2>Security record</h2><p>Review sign-ins, file actions and permission changes across the portal.</p></div>
+        <span className="section-kicker">Append-only activity</span>
       </div>
-      {loading ? <p className="empty-state">Loading audit activity…</p> : (
-        <div className="audit-table" role="table" aria-label="Recent audit activity">
-          {events.map((event) => (
-            <div className="audit-row" role="row" key={event.id}>
-              <div role="cell"><strong>{event.action.replaceAll("_", " ")}</strong><span>{event.actor_name ?? event.actor_email ?? "System"}</span></div>
-              <div role="cell"><span>{new Date(event.created_at).toLocaleString()}</span><small>{event.ip_address ?? "Internal worker"}</small></div>
-              <span className={`audit-outcome ${event.outcome.toLowerCase()}`} role="cell">{event.outcome}</span>
-            </div>
-          ))}
-          {events.length === 0 ? <p className="empty-state">No audit events recorded yet.</p> : null}
+      <div className="card audit-card">
+        <div className="card-heading">
+          <div><p className="eyebrow">RECENT EVENTS</p><h3>Audit activity</h3></div>
+          <button className="secondary-button small" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Refreshing…" : "Refresh"}</button>
         </div>
-      )}
-      <Pagination value={pagination} itemLabel="records" disabled={loading} onChange={(nextPage) => { setLoading(true); setPage(nextPage); }} />
+        {loading ? <p className="empty-state">Loading audit activity…</p> : (
+          <div className="audit-table" role="table" aria-label="Recent audit activity">
+            {events.map((event) => (
+              <div className="audit-row" role="row" key={event.id}>
+                <div role="cell"><strong>{event.action.replaceAll("_", " ")}</strong><span>{event.actor_name ?? event.actor_email ?? "System"}</span></div>
+                <div role="cell"><span>{new Date(event.created_at).toLocaleString()}</span><small>{event.ip_address ?? "Internal worker"}</small></div>
+                <span className={`audit-outcome ${event.outcome.toLowerCase()}`} role="cell">{event.outcome}</span>
+              </div>
+            ))}
+            {events.length === 0 ? <p className="empty-state">No audit events recorded yet.</p> : null}
+          </div>
+        )}
+        <Pagination value={pagination} itemLabel="records" disabled={loading} onChange={(nextPage) => { setLoading(true); setPage(nextPage); }} />
+      </div>
     </section>
   );
 }
@@ -115,8 +121,13 @@ function AdminPanel() {
   };
 
   return (
-    <div className="dashboard-grid">
-      <section className="card">
+    <section className="portal-section" id="clients">
+      <div className="section-heading">
+        <div><p className="eyebrow">CONTROLLED ACCESS</p><h2>Clients and invitations</h2><p>Create access only when a client needs an ongoing private workspace.</p></div>
+        <span className="section-kicker">Password + MFA</span>
+      </div>
+      <div className="dashboard-grid">
+      <section className="card invite-card">
         <p className="eyebrow">CLIENT ACCESS</p>
         <h2>Invite a client</h2>
         <p className="muted">The client receives a private setup link and must configure MFA.</p>
@@ -149,7 +160,8 @@ function AdminPanel() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -160,16 +172,33 @@ export function DashboardPage() {
   return (
     <main className="dashboard-shell">
       <header className="dashboard-header">
-        <div className="compact-brand"><span>B</span><div><strong>Bitwise Secure Portal</strong><small>{auth.user.role === "ADMIN" ? "Administrator" : "Client space"}</small></div></div>
-        <div className="user-menu">
-          <div><strong>{auth.user.displayName}</strong><span>{auth.user.email}</span></div>
-          <button className="secondary-button small" type="button" onClick={() => void auth.logout()}>Sign out</button>
+        <div className="dashboard-header-inner">
+          <div className="compact-brand"><span aria-hidden="true">B</span><div><strong>Bitwise Secure Portal</strong><small>{auth.user.role === "ADMIN" ? "Administrative workspace" : "Private client workspace"}</small></div></div>
+          <div className="header-actions">
+            <span className="secure-status"><i aria-hidden="true" /> Secure session</span>
+            <div className="user-menu">
+              <div><strong>{auth.user.displayName}</strong><span>{auth.user.email}</span></div>
+              <button className="secondary-button small" type="button" onClick={() => void auth.logout()}>Sign out</button>
+            </div>
+          </div>
         </div>
       </header>
       <section className="dashboard-content">
-        <div className="welcome"><p className="eyebrow">SECURE SESSION ACTIVE</p><h1>Welcome, {auth.user.displayName}</h1><p>Only authorised members can access the information in this portal.</p></div>
-        {auth.user.role === "ADMIN" ? <AdminPanel /> : null}
+        <div className="portal-hero">
+          <div className="welcome"><p className="eyebrow">SECURE SESSION ACTIVE</p><h1>Welcome, {auth.user.displayName}</h1><p>{auth.user.role === "ADMIN" ? "Manage client access and exchange sensitive files from one controlled workspace." : "Exchange sensitive documents and reports with Bitwise Security in your private workspace."}</p></div>
+          <div className="assurance-strip" aria-label="Portal security protections">
+            <span><i aria-hidden="true">01</i>Encrypted storage</span>
+            <span><i aria-hidden="true">02</i>Malware screening</span>
+            <span><i aria-hidden="true">03</i>Audited access</span>
+          </div>
+        </div>
+        <nav className="portal-nav" aria-label="Portal sections">
+          <a href="#workspace">Workspace</a>
+          {auth.user.role === "ADMIN" ? <a href="#clients">Clients</a> : null}
+          {auth.user.role === "ADMIN" ? <a href="#security">Security</a> : null}
+        </nav>
         <FileTransferPanel role={auth.user.role} />
+        {auth.user.role === "ADMIN" ? <AdminPanel /> : null}
         {auth.user.role === "ADMIN" ? <AuditPanel /> : null}
       </section>
     </main>

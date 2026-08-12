@@ -346,11 +346,20 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
   const sent = files.filter((file) => file.direction === "CLIENT_TO_ADMIN");
   const reports = files.filter((file) => file.direction === "ADMIN_TO_CLIENT");
   return (
-    <>
+    <section className="portal-section workspace-section" id="workspace">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">PRIVATE FILE EXCHANGE</p>
+          <h2>{role === "ADMIN" ? "Client workspace" : "Your secure workspace"}</h2>
+          <p>{role === "ADMIN" ? "Select a client space, choose how to deliver the file, then let the portal encrypt and screen it." : "Send documents to Bitwise Security and collect completed reports from one private place."}</p>
+        </div>
+        <span className="section-kicker">Up to 2 GB per file</span>
+      </div>
       {role === "ADMIN" ? (
-        <div className="space-controls">
+        <div className="space-controls card workspace-toolbar">
+          <div className="workspace-toolbar-copy"><span>01</span><div><strong>Choose a workspace</strong><small>Every client space is isolated from the others.</small></div></div>
           {spaces.length > 0 ? (
-            <label className="space-picker">Client space<select value={spaceId} onChange={(event) => changeSpace(event.target.value)}>{spaces.map((space) => <option value={space.id} key={space.id}>{space.name}</option>)}</select></label>
+            <label className="space-picker"><span className="sr-only">Client space</span><select value={spaceId} aria-label="Client space" onChange={(event) => changeSpace(event.target.value)}>{spaces.map((space) => <option value={space.id} key={space.id}>{space.name}</option>)}</select></label>
           ) : <Notice type="info">Create a client space to start sharing files.</Notice>}
           <div className="space-action-buttons">
             <button className="secondary-button small" type="button" onClick={() => setShowSpaceCreator((value) => !value)}>{showSpaceCreator ? "Cancel" : "New space without login"}</button>
@@ -391,7 +400,13 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
           ) : null}
         </div>
       ) : null}
-      <section className="card upload-card">
+      <div className="workflow-steps" aria-label="Secure transfer workflow">
+        <div className="active"><span>01</span><div><strong>{role === "ADMIN" ? "Choose recipient" : "Choose document"}</strong><small>{role === "ADMIN" ? "Portal access or protected link" : "Select an approved file type"}</small></div></div>
+        <div><span>02</span><div><strong>Encrypt and screen</strong><small>AES-GCM encryption and malware scan</small></div></div>
+        <div><span>03</span><div><strong>{role === "ADMIN" ? "Deliver securely" : "Track status"}</strong><small>{role === "ADMIN" ? "Controlled access with automatic expiry" : "See when the file is available"}</small></div></div>
+      </div>
+      <div className={role === "ADMIN" && transferPagination.total > 0 ? "workspace-main-grid" : ""}>
+      <section className="card upload-card featured-card">
         <div>
           <p className="eyebrow">ENCRYPTED BEFORE STORAGE</p>
           <h2>{role === "ADMIN" ? "Share a report" : "Send a document securely"}</h2>
@@ -433,15 +448,16 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
       </section>
       {role === "ADMIN" && transferPagination.total > 0 ? (
         <section className="card transfer-list-card">
-          <div className="card-heading"><h2>Password-protected links</h2><span className="count">{transferPagination.total}</span></div>
+          <div className="card-heading"><div><p className="eyebrow">ACTIVE DELIVERY</p><h2>Password-protected links</h2></div><span className="count">{transferPagination.total}</span></div>
           {transfers.map((transfer) => <article className="transfer-row" key={transfer.id}><div><strong>{transfer.display_name}</strong><span>{transfer.status.replaceAll("_", " ")} · {transfer.download_count} downloads · expires {new Date(transfer.expires_at).toLocaleDateString()}</span></div>{transfer.status === "ACTIVE" || transfer.status === "PENDING_SCAN" ? <button className="danger-link" type="button" onClick={() => void revokeTransfer(transfer.id)}>Revoke link</button> : null}</article>)}
           <Pagination value={transferPagination} itemLabel="links" disabled={progress != null} onChange={setTransferPage} />
         </section>
       ) : null}
+      </div>
       <div className="file-columns">
         <FileList files={sent} title="Files sent to Bitwise Security" empty="No client documents yet." role={role} onChanged={loadFiles} />
         <FileList files={reports} title="Reports shared with the client" empty="No reports have been shared yet." role={role} onChanged={loadFiles} />
       </div>
-    </>
+    </section>
   );
 }

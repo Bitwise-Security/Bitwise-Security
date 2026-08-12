@@ -1,0 +1,113 @@
+{
+  "seo": {
+    "title": "Bitwise Security - Secure File Portal",
+    "description": "Exchange sensitive documents and security reports through a private, encrypted Bitwise Security client portal."
+  },
+  "hero": {
+    "eyebrow": "[ SECURE FILE PORTAL ]",
+    "titlePrefix": "SENSITIVE FILES.",
+    "titleAccent": "CONTROLLED DELIVERY.",
+    "description": "A private route for the documents that should never become ordinary email attachments. Clients can upload sensitive material and receive completed reports through an encrypted, malware-screened workspace."
+  },
+  "modes": [
+    {
+      "label": "ONGOING ENGAGEMENTS",
+      "title": "Private client workspace",
+      "text": "A named client space protected by password and MFA, with a clear separation between documents sent to Bitwise Security and reports shared back."
+    },
+    {
+      "label": "ONE-OFF DELIVERY",
+      "title": "Password-protected transfer",
+      "text": "A time-limited download link for recipients who do not need an account. The link and generated password are shared through separate channels."
+    }
+  ],
+  "principles": [
+    "No public or anonymous file listings",
+    "Every client space is isolated",
+    "Files are downloaded, never previewed inline",
+    "Expiry and permanent deletion controls"
+  ],
+  "capabilities": {
+    "title": "A deliberate transfer workflow",
+    "items": [
+      {
+        "step": "01",
+        "title": "Choose the recipient",
+        "text": "Use an MFA-protected client space for ongoing work or a seven-day password-protected link for one-off delivery."
+      },
+      {
+        "step": "02",
+        "title": "Encrypt before storage",
+        "text": "The browser encrypts file chunks with AES-256-GCM before encrypted object data is written to private storage."
+      },
+      {
+        "step": "03",
+        "title": "Quarantine and screen",
+        "text": "Uploads remain unavailable while file-type checks and continuously updated malware signatures screen the content."
+      },
+      {
+        "step": "04",
+        "title": "Deliver with control",
+        "text": "Short-lived, single-use download tickets prevent a copied download address from becoming permanent access."
+      },
+      {
+        "step": "05",
+        "title": "Track accountability",
+        "text": "Uploads, downloads, deletions, sign-ins and permission changes are recorded in the administrative security log."
+      },
+      {
+        "step": "06",
+        "title": "Close the engagement",
+        "text": "Automatic expiry is available per file, and completed client spaces can be permanently removed with explicit confirmation."
+      }
+    ]
+  },
+  "security": {
+    "title": "Security without making clients fight the interface",
+    "text": "The portal keeps the sensitive controls behind a straightforward workflow: choose a space, choose a file, and send. Stronger protections such as MFA, object-level authorization, CSRF protection, rate limiting and one-use tickets operate without adding unnecessary decisions for the recipient.",
+    "items": [
+      "AES-256-GCM authenticated encryption",
+      "Private Cloudflare R2 object storage",
+      "Password plus TOTP MFA for accounts",
+      "Argon2id password protection",
+      "Malware scanning before availability",
+      "Audited access and deletion"
+    ]
+  },
+  "gallery": {
+    "title": "The secure portal in use",
+    "subtitle": "All screenshots contain fabricated demo names and files. No customer data is shown.",
+    "items": [
+      {
+        "src": "/secure-portal/secure-login.png",
+        "alt": "Bitwise Secure Portal sign-in screen with security protections",
+        "title": "Clear, protected sign-in"
+      },
+      {
+        "src": "/secure-portal/admin-workspace.png",
+        "alt": "Administrator client workspace with encrypted upload and delivery controls",
+        "title": "Controlled client workspace"
+      },
+      {
+        "src": "/secure-portal/protected-delivery.png",
+        "alt": "Password-protected file delivery workflow",
+        "title": "One-off secure delivery"
+      },
+      {
+        "src": "/secure-portal/client-workspace.png",
+        "alt": "Private client workspace for sending documents and receiving reports",
+        "title": "Simple client experience"
+      }
+    ]
+  },
+  "retention": {
+    "title": "Designed for the end of the engagement",
+    "text": "Sensitive assessment data should not remain online by accident. Files can expire automatically, protected links expire after seven days, and an administrator can permanently delete a completed client space and its stored objects. Minimal content-free audit evidence may be retained for security accountability."
+  },
+  "delivery": {
+    "title": "Need to send something sensitive?",
+    "text": "Contact Bitwise Security first. You will receive either a private account invitation or a protected transfer link appropriate for the engagement. Never send sensitive assessment material through the normal contact form.",
+    "primaryCta": "Request a secure exchange",
+    "secondaryCta": "See security services"
+  }
+}

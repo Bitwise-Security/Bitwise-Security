@@ -3,9 +3,20 @@ import type { FormEvent, PropsWithChildren, ReactNode } from "react";
 export function Shell({ children }: PropsWithChildren) {
   return (
     <main className="shell">
+      <div className="auth-frame">
+      <aside className="auth-context" aria-label="Secure portal protections">
+        <p className="eyebrow">PRIVATE CLIENT DELIVERY</p>
+        <h2>Sensitive files deserve a controlled route.</h2>
+        <p>Exchange documents and reports without public links, inbox attachments or shared-drive confusion.</p>
+        <ul>
+          <li><span aria-hidden="true">01</span><div><strong>Encrypted before storage</strong><small>File content is protected with authenticated encryption.</small></div></li>
+          <li><span aria-hidden="true">02</span><div><strong>Verified access</strong><small>Private accounts use a password and authenticator code.</small></div></li>
+          <li><span aria-hidden="true">03</span><div><strong>Malware screened</strong><small>Files remain unavailable until security checks pass.</small></div></li>
+        </ul>
+      </aside>
       <section className="auth-panel" aria-labelledby="portal-title">
         <header className="brand">
-          <div className="brand-mark" aria-hidden="true">B</div>
+          <div className="brand-mark" aria-hidden="true"><span>B</span></div>
           <div>
             <p className="eyebrow">BITWISE SECURITY</p>
             <h1 id="portal-title">Secure Portal</h1>
@@ -13,9 +24,10 @@ export function Shell({ children }: PropsWithChildren) {
         </header>
         {children}
         <footer className="security-note">
-          <span aria-hidden="true">●</span> Encrypted connection · Private client access
+          <span aria-hidden="true">●</span> Encrypted connection <i>·</i> Private client access
         </footer>
       </section>
+      </div>
     </main>
   );
 }

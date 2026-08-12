@@ -22,6 +22,7 @@ export default function Navigation() {
     { name: "HOME", path: "/" },
     { name: "SERVICES", path: "/services" },
     { name: "REPORTER", path: "/reporter" },
+    { name: "PORTAL", path: "/secure-portal" },
     { name: "ABOUT", path: "/about" },
     { name: "CONTACT", path: "/contact" },
   ];
@@ -52,7 +53,7 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-5 lg:space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
