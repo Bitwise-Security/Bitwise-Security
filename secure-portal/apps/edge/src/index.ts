@@ -149,10 +149,18 @@ function decodeD1Parameter(value: unknown): string | number | null | ArrayBuffer
 }
 
 function encodeD1Value(value: unknown): unknown {
-  if (value instanceof ArrayBuffer) {
-    const bytes = new Uint8Array(value);
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+    const bytes = value instanceof ArrayBuffer
+      ? new Uint8Array(value)
+      : new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
     let binary = "";
     for (const byte of bytes) binary += String.fromCharCode(byte);
+    return { __portalBinary: btoa(binary) } satisfies EncodedBinary;
+  }
+  // D1 may surface BLOB columns as byte arrays depending on the runtime path.
+  if (Array.isArray(value) && value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+    let binary = "";
+    for (const byte of value) binary += String.fromCharCode(byte as number);
     return { __portalBinary: btoa(binary) } satisfies EncodedBinary;
   }
   return value;

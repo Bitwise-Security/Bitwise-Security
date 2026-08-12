@@ -59,6 +59,10 @@ function isEncodedBinary(value: unknown): value is EncodedBinary {
 function decodeRow<T>(row: Record<string, unknown>): T {
   const decoded = Object.fromEntries(Object.entries(row).map(([key, value]) => {
     if (isEncodedBinary(value)) return [key, Buffer.from(value.__portalBinary, "base64")];
+    if ((key === "wrapped_dek" || key === "nonce_prefix") && Array.isArray(value) &&
+        value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+      return [key, Buffer.from(value as number[])];
+    }
     if ((key === "locked" || key === "uploaded_by_me") && typeof value === "number") {
       return [key, value === 1];
     }
