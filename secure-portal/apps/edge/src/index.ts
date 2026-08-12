@@ -5,7 +5,7 @@ import type { RateState } from "./rate-limit.js";
 
 export { ContainerProxy };
 
-const CONTAINER_NAME = "bitwise-secure-portal-staging-api";
+const CONTAINER_NAME = "bitwise-secure-portal-staging-api-v2";
 const R2_VIRTUAL_HOST = "portal-files.internal";
 const D1_VIRTUAL_HOST = "portal-db.internal";
 const STORAGE_KEY = /^[a-zA-Z0-9_-]{16,100}$/u;
