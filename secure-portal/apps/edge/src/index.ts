@@ -8,6 +8,7 @@ export { ContainerProxy };
 const CONTAINER_NAME = "bitwise-secure-portal-staging-api-v2";
 const R2_VIRTUAL_HOST = "portal-files.internal";
 const D1_VIRTUAL_HOST = "portal-db.internal";
+const RESEND_VIRTUAL_HOST = "portal-resend.internal";
 const STORAGE_KEY = /^[a-zA-Z0-9_-]{16,100}$/u;
 
 interface D1QueryInput {
@@ -198,9 +199,17 @@ async function resendEgressHandler(request: Request, bindings: Cloudflare.Env): 
   if (request.method !== "POST" || url.pathname !== "/emails") {
     return json({ error: "Outbound operation denied" }, 403);
   }
+  const body = await request.arrayBuffer();
+  if (body.byteLength > 64 * 1024) return json({ error: "Outbound payload too large" }, 413);
   const headers = new Headers(request.headers);
+  headers.delete("Host");
+  headers.delete("Content-Length");
   headers.set("Authorization", `Bearer ${bindings.RESEND_API_KEY}`);
-  const authenticatedRequest = new Request(request, { headers });
+  const authenticatedRequest = new Request("https://api.resend.com/emails", {
+    method: "POST",
+    headers,
+    body,
+  });
   return fetch(authenticatedRequest);
 }
 
@@ -213,7 +222,7 @@ export class PortalContainer extends Container<Cloudflare.Env> {
   override allowedHosts = [
     R2_VIRTUAL_HOST,
     D1_VIRTUAL_HOST,
-    "api.resend.com",
+    RESEND_VIRTUAL_HOST,
     "database.clamav.net",
     "*.clamav.net",
   ];
@@ -231,6 +240,7 @@ export class PortalContainer extends Container<Cloudflare.Env> {
     EMAIL_FROM: this.env.EMAIL_FROM,
     EMAIL_PROVIDER: "resend",
     RESEND_API_KEY: "injected-by-cloudflare-egress",
+    RESEND_API_ORIGIN: `http://${RESEND_VIRTUAL_HOST}`,
     STORAGE_MODE: "r2-binding",
     R2_BINDING_ORIGIN: `http://${R2_VIRTUAL_HOST}`,
     FILE_KEY_PROVIDER: "cloudflare-secret",
@@ -250,7 +260,7 @@ export class PortalContainer extends Container<Cloudflare.Env> {
 PortalContainer.outboundByHost = {
   [R2_VIRTUAL_HOST]: r2BindingHandler,
   [D1_VIRTUAL_HOST]: d1BindingHandler,
-  "api.resend.com": resendEgressHandler,
+  [RESEND_VIRTUAL_HOST]: resendEgressHandler,
 };
 
 export class AuthRateLimiter extends DurableObject<Cloudflare.Env> {

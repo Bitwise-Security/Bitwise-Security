@@ -28,7 +28,7 @@ function getTransporter(): nodemailer.Transporter {
 export async function sendMail(message: MailMessage): Promise<void> {
   const config = getConfig();
   if (config.EMAIL_PROVIDER === "resend") {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(new URL("/emails", config.RESEND_API_ORIGIN), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.RESEND_API_KEY!}`,

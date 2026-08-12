@@ -27,6 +27,7 @@ const schema = z.object({
   EMAIL_FROM: z.string().min(3),
   EMAIL_PROVIDER: z.enum(["smtp", "resend"]).default("smtp"),
   RESEND_API_KEY: z.string().optional(),
+  RESEND_API_ORIGIN: z.string().url().default("https://api.resend.com"),
   STORAGE_MODE: z.enum(["local", "s3", "r2-binding"]).default("local"),
   R2_BINDING_ORIGIN: z.string().url().default("http://portal-files.internal"),
   LOCAL_STORAGE_PATH: z.string().default("./data/private-files"),
