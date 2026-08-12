@@ -13,6 +13,14 @@ $bucketName = "bitwise-secure-portal-staging-files"
 $databaseName = "bitwise-secure-portal-staging-db"
 $workerName = "bitwise-secure-portal-staging"
 
+function Get-PortalStagingValue([string]$Name) {
+  $value = [Environment]::GetEnvironmentVariable($Name, "Process")
+  if ([string]::IsNullOrWhiteSpace($value)) {
+    $value = [Environment]::GetEnvironmentVariable($Name, "User")
+  }
+  return $value
+}
+
 if (-not (Test-Path -LiteralPath $wrangler)) {
   throw "Wrangler is not installed. Run npm ci in secure-portal first."
 }
@@ -28,12 +36,14 @@ $requiredVariables = @(
 )
 
 foreach ($variableName in $requiredVariables) {
-  if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($variableName))) {
+  if ([string]::IsNullOrWhiteSpace((Get-PortalStagingValue $variableName))) {
     throw "Required environment variable $variableName is missing."
   }
 }
 
-$keyRingText = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_FILE_KEY_RING")
+$env:CLOUDFLARE_API_TOKEN = Get-PortalStagingValue "CLOUDFLARE_API_TOKEN"
+
+$keyRingText = Get-PortalStagingValue "PORTAL_STAGING_FILE_KEY_RING"
 $keyRing = $keyRingText | ConvertFrom-Json
 if ([string]::IsNullOrWhiteSpace($keyRing.current) -or $null -eq $keyRing.keys) {
   throw "PORTAL_STAGING_FILE_KEY_RING must contain current and keys fields."
@@ -64,12 +74,12 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Failed to create the unreachable staging Worker shell." }
 
   $secrets = [ordered]@{
-    MFA_ENCRYPTION_KEY = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_MFA_ENCRYPTION_KEY")
-    SESSION_PEPPER = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_SESSION_PEPPER")
+    MFA_ENCRYPTION_KEY = Get-PortalStagingValue "PORTAL_STAGING_MFA_ENCRYPTION_KEY"
+    SESSION_PEPPER = Get-PortalStagingValue "PORTAL_STAGING_SESSION_PEPPER"
     FILE_KEY_RING = $keyRingText
-    RESEND_API_KEY = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_RESEND_API_KEY")
-    BOOTSTRAP_ADMIN_EMAIL = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_ADMIN_EMAIL")
-    BOOTSTRAP_ADMIN_PASSWORD = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_ADMIN_PASSWORD")
+    RESEND_API_KEY = Get-PortalStagingValue "PORTAL_STAGING_RESEND_API_KEY"
+    BOOTSTRAP_ADMIN_EMAIL = Get-PortalStagingValue "PORTAL_STAGING_ADMIN_EMAIL"
+    BOOTSTRAP_ADMIN_PASSWORD = Get-PortalStagingValue "PORTAL_STAGING_ADMIN_PASSWORD"
   }
 
   foreach ($secretName in $secrets.Keys) {
@@ -95,6 +105,17 @@ try {
     ConvertTo-Json -Compress |
     & $wrangler secret bulk --config $config
   if ($LASTEXITCODE -ne 0) { throw "Failed to remove temporary administrator bootstrap credentials." }
+
+  $healthyAfterRemoval = $false
+  for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    try {
+      $health = Invoke-RestMethod -Uri "https://portal-test.bitwise-security.nl/api/v1/health" -TimeoutSec 20
+      if ($health.status -eq "ok") { $healthyAfterRemoval = $true; break }
+    }
+    catch {}
+    Start-Sleep -Seconds 15
+  }
+  if (-not $healthyAfterRemoval) { throw "Staging failed its health check after bootstrap-secret removal." }
 
   Write-Output "Deployed only $workerName with D1 $databaseName, R2 $bucketName, and portal-test.bitwise-security.nl."
 }

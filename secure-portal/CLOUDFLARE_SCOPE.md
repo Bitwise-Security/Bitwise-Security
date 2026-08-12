@@ -14,6 +14,9 @@ Worker, Pages project, bucket, database, container, hostname, or zone. It perfor
 exact-name lookup of the staging bucket before creating it and uses only
 `apps/edge/wrangler.staging.jsonc`.
 
+Deployment credentials remain on the administrator workstation. GitHub Actions is
+limited to credential-free validation and cannot deploy or read runtime secrets.
+
 The following existing resources are explicitly out of scope:
 
 - The `bitwise-security` marketing Pages project

@@ -81,23 +81,20 @@ Staging is deliberately isolated at `portal-test.bitwise-security.nl` and uses o
 
 Docker must be running because Wrangler builds the Cloudflare Container locally.
 Wrangler applies versioned migrations to the exact dedicated D1 database before
-deploying the Worker. Set secrets as environment variables, never in source:
+deploying the Worker. Deployment runs from a trusted administrator workstation;
+GitHub Actions performs credential-free CI only and receives no Cloudflare, Resend,
+cryptographic, or administrator credentials. Store secrets in the Windows user
+environment, never in source:
 
 ```powershell
-$env:CLOUDFLARE_API_TOKEN = [Environment]::GetEnvironmentVariable("CLOUDFLARE_API_TOKEN", "User")
-$env:PORTAL_STAGING_MFA_ENCRYPTION_KEY = "<32 random bytes, base64>"
-$env:PORTAL_STAGING_SESSION_PEPPER = "<independent random secret>"
-$env:PORTAL_STAGING_FILE_KEY_RING = '{"current":"v1","keys":{"v1":"<32 random bytes, base64>"}}'
-$env:PORTAL_STAGING_RESEND_API_KEY = "<new restricted Resend key>"
-$env:PORTAL_STAGING_ADMIN_EMAIL = "<administrator email>"
-$env:PORTAL_STAGING_ADMIN_PASSWORD = "<unique 12+ character password>"
 ./scripts/provision-cloudflare-staging.ps1
 ```
 
 The deployment applies D1 migrations and startup creates the first administrator
 only when no administrator exists. The setup email requires both its one-time token and the
-separately known password before revealing or confirming the TOTP secret. After MFA
-is active, remove the two bootstrap secrets from the staging Worker.
+separately known password before revealing or confirming the TOTP secret. The script
+removes both temporary bootstrap secrets from the Worker immediately after the first
+successful health check and verifies health again.
 
 ## Alternative production configuration
 
