@@ -223,6 +223,11 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
   };
   const drop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    if (!spaceId) {
+      setMessageType("error");
+      setMessage(role === "ADMIN" ? "Create or select a client workspace before choosing a file." : "No client workspace is available. Contact Bitwise Security.");
+      return;
+    }
     choose(event.dataTransfer.files);
   };
 
@@ -253,13 +258,24 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
     setTrackedFileId(null);
     setMessage(null);
     setSecureTransfer(null);
+    const uploadController = new AbortController();
+    let stallTimer: number | undefined;
+    const refreshStallTimer = () => {
+      if (stallTimer !== undefined) window.clearTimeout(stallTimer);
+      stallTimer = window.setTimeout(() => uploadController.abort(), 90_000);
+    };
+    refreshStallTimer();
     try {
       const result = await uploadEncryptedFile({
         spaceId,
         file: selected,
         expiresInDays: deliveryMode === "PASSWORD_LINK" ? 7 : expiryDays === "never" ? null : Number(expiryDays),
         deliveryMode,
-        onProgress: setProgress,
+        onProgress: (percentage) => {
+          setProgress(percentage);
+          refreshStallTimer();
+        },
+        signal: uploadController.signal,
       });
       setTrackedFileId(result.fileId);
       setTransferPhase("scanning");
@@ -279,8 +295,11 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
     } catch (error) {
       setTransferPhase("selecting");
       setMessageType("error");
-      setMessage(error instanceof Error ? error.message : "The upload could not be completed.");
+      setMessage(error instanceof DOMException && error.name === "AbortError"
+        ? "The upload stopped because no progress was received for 90 seconds. Check your connection and try again; incomplete encrypted upload data is cleaned up automatically."
+        : error instanceof Error ? error.message : "The upload could not be completed.");
     } finally {
+      if (stallTimer !== undefined) window.clearTimeout(stallTimer);
       setProgress(null);
     }
   };
@@ -432,13 +451,13 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
         </div>
       ) : null}
       <div className="workflow-steps" aria-label="Secure transfer workflow">
-        <div className={workflowPhase === "selecting" ? "active" : "complete"} aria-current={workflowPhase === "selecting" ? "step" : undefined}><span>{workflowPhase === "selecting" ? "01" : "✓"}</span><div><strong>{role === "ADMIN" ? "Choose recipient" : "Choose document"}</strong><small>{workflowPhase === "selecting" ? (role === "ADMIN" ? "Select a workspace, delivery method and file" : "Select an approved file type") : "Selection complete"}</small></div></div>
+        <div className={workflowPhase === "selecting" ? "active" : "complete"} aria-current={workflowPhase === "selecting" ? "step" : undefined}><span>{workflowPhase === "selecting" ? "01" : "✓"}</span><div><strong>{role === "ADMIN" ? "Choose recipient" : "Choose document"}</strong><small>{workflowPhase === "selecting" ? selected ? "File selected — start the encrypted upload below" : (role === "ADMIN" ? "Select a workspace, delivery method and file" : "Select an approved file type") : "Selection complete"}</small></div></div>
         <div className={workflowPhase === "uploading" || workflowPhase === "scanning" ? "active" : workflowPhase === "ready" ? "complete" : workflowPhase === "rejected" ? "error" : ""} aria-current={workflowPhase === "uploading" || workflowPhase === "scanning" ? "step" : undefined}><span>{workflowPhase === "ready" ? "✓" : workflowPhase === "rejected" ? "!" : "02"}</span><div><strong>{workflowPhase === "uploading" ? "Encrypting and uploading" : workflowPhase === "scanning" ? "Security scan running" : workflowPhase === "rejected" ? "File blocked" : "Encrypt and screen"}</strong><small>{workflowPhase === "uploading" ? `${progress ?? 0}% encrypted and uploaded` : workflowPhase === "scanning" ? "Quarantined until malware and file-type checks pass" : workflowPhase === "rejected" ? "The file was never made available" : "AES-GCM encryption and malware scan"}</small></div></div>
         <div className={workflowPhase === "ready" ? "active complete" : ""} aria-current={workflowPhase === "ready" ? "step" : undefined}><span>{workflowPhase === "ready" ? "✓" : "03"}</span><div><strong>{workflowPhase === "ready" ? "Ready for secure delivery" : role === "ADMIN" ? "Deliver securely" : "Available to Bitwise"}</strong><small>{workflowPhase === "ready" ? "Scan passed and controlled access is active" : "Starts only after the security scan passes"}</small></div></div>
       </div>
       <div className={`scan-status ${workflowPhase}`} role="status" aria-live="polite">
         <span aria-hidden="true" />
-        {workflowPhase === "selecting" ? "Step 1 of 3 — choose the delivery method and file." : null}
+        {workflowPhase === "selecting" ? selected ? `Selected: ${selected.name} — not uploaded yet. Click “Start encrypted upload” below.` : "Step 1 of 3 — choose the delivery method and file." : null}
         {workflowPhase === "uploading" ? `Step 2 of 3 — encrypting in your browser and uploading (${progress ?? 0}%).` : null}
         {workflowPhase === "scanning" ? "Step 2 of 3 — upload complete; the quarantined file is being scanned. This page checks for the result automatically." : null}
         {workflowPhase === "ready" ? "Step 3 of 3 — scan passed; the file is available through controlled access." : null}
@@ -457,11 +476,12 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
             <button className={deliveryMode === "PASSWORD_LINK" ? "active" : ""} type="button" onClick={() => { setDeliveryMode("PASSWORD_LINK"); setSecureTransfer(null); setMessage(null); }}><strong>Password-protected link</strong><span>No account · expires after 7 days</span></button>
           </div>
         ) : null}
-        <div className="drop-zone" onDragOver={(event) => event.preventDefault()} onDrop={drop}>
-          <input ref={inputRef} type="file" accept=".pdf,.docx,.xlsx,.csv,.txt,.png,.jpg,.jpeg" hidden onChange={(event: ChangeEvent<HTMLInputElement>) => choose(event.target.files)} />
-          <strong>{selected ? selected.name : "Drag and drop a file here"}</strong>
-          <span>{selected ? formatBytes(selected.size) : "or choose one from your device"}</span>
-          <button className="secondary-button small" type="button" onClick={() => inputRef.current?.click()}>{selected ? "Choose another" : "Choose file"}</button>
+        {!spaceId ? <Notice type="info">{role === "ADMIN" ? "No active client workspace exists yet. Create one above before choosing a file." : "No client workspace is available. Contact Bitwise Security before uploading."}</Notice> : null}
+        <div className={`drop-zone ${!spaceId ? "disabled" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={drop}>
+          <input ref={inputRef} type="file" accept=".pdf,.docx,.xlsx,.csv,.txt,.png,.jpg,.jpeg" disabled={!spaceId} hidden onChange={(event: ChangeEvent<HTMLInputElement>) => choose(event.target.files)} />
+          <strong>{!spaceId ? "Create or select a client workspace first" : selected ? selected.name : "Drag and drop a file here"}</strong>
+          <span>{!spaceId ? "Files cannot be uploaded without an isolated destination." : selected ? formatBytes(selected.size) : "or choose one from your device"}</span>
+          <button className="secondary-button small" type="button" disabled={!spaceId} onClick={() => inputRef.current?.click()}>{selected ? "Choose another" : "Choose file"}</button>
         </div>
         {deliveryMode === "PASSWORD_LINK" ? <Notice type="info">The encrypted file and link expire automatically after 7 days. Send the link and password using different channels.</Notice> : <label className="expiry-picker">Automatic deletion
           <select value={expiryDays} onChange={(event) => setExpiryDays(event.target.value)}>
@@ -471,8 +491,9 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
             <option value="never">No automatic deletion</option>
           </select>
         </label>}
+        {selected && progress == null && spaceId ? <div className="selection-ready" role="status"><span aria-hidden="true">✓</span><div><strong>Ready to upload</strong><small>The file is still only on this device. Start the encrypted upload when you are ready.</small></div></div> : null}
         {progress != null ? <div className="upload-progress"><progress max="100" value={progress} /><span>{progress}% encrypted and uploaded</span></div> : null}
-        <button className="primary-button" type="button" disabled={!selected || !spaceId || progress != null} onClick={() => void upload()}>{progress != null ? `Encrypting and uploading… ${progress}%` : deliveryMode === "PASSWORD_LINK" ? "Encrypt and create secure link" : "Encrypt and upload"}</button>
+        <button className="primary-button upload-start-button" data-testid="start-upload" type="button" disabled={!selected || !spaceId || progress != null} onClick={() => void upload()}>{progress != null ? `Encrypting and uploading… ${progress}%` : !spaceId ? "Create or select a client workspace first" : deliveryMode === "PASSWORD_LINK" ? "Start encrypted upload and create link" : "Start encrypted upload"}</button>
         {message ? <Notice type={messageType}>{message}</Notice> : null}
         {secureTransfer ? (
           <section className="transfer-credentials" aria-labelledby="transfer-ready-title">

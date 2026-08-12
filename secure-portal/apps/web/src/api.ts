@@ -26,13 +26,14 @@ export function setCsrfToken(token: string | null): void {
   csrfToken = token;
 }
 
-export async function uploadBinary(path: string, body: ArrayBuffer, directToStorage: boolean): Promise<string> {
+export async function uploadBinary(path: string, body: ArrayBuffer, directToStorage: boolean, signal?: AbortSignal): Promise<string> {
   const headers = new Headers({ "Content-Type": "application/octet-stream" });
   if (!directToStorage && csrfToken) headers.set("X-CSRF-Token", csrfToken);
   const response = await fetch(path, {
     method: "PUT",
     body,
     headers,
+    signal: signal ?? null,
     credentials: directToStorage ? "omit" : "include",
   });
   if (!response.ok) throw new ApiError("Encrypted upload part failed", response.status);

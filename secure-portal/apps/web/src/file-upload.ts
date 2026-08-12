@@ -73,6 +73,7 @@ export async function uploadEncryptedFile(options: {
       expiresInDays: options.expiresInDays,
       deliveryMode: options.deliveryMode ?? "PORTAL",
     }),
+    signal: options.signal ?? null,
   });
   const keyBytes = decodeBase64(session.plaintextKey);
   const prefix = decodeBase64(session.noncePrefix);
@@ -96,18 +97,19 @@ export async function uploadEncryptedFile(options: {
     );
     const target = await api<PartTarget>(
       `/api/v1/uploads/${session.id}/parts/${partNumber}/url`,
-      { method: "POST", body: "{}" },
+      { method: "POST", body: "{}", signal: options.signal ?? null },
     );
     if (ciphertext.byteLength !== target.ciphertextSize) throw new Error("Encrypted chunk size mismatch");
-    const etag = await uploadBinary(target.url, ciphertext, target.mode === "s3");
+    const etag = await uploadBinary(target.url, ciphertext, target.mode === "s3", options.signal);
     if (target.mode === "s3") {
       await api<void>(`/api/v1/uploads/${session.id}/parts/${partNumber}/confirm`, {
         method: "POST",
         body: JSON.stringify({ etag, ciphertextSize: ciphertext.byteLength }),
+        signal: options.signal ?? null,
       });
     }
     options.onProgress(Math.round((partNumber / session.chunkCount) * 100));
   }
-  await api(`/api/v1/uploads/${session.id}/complete`, { method: "POST", body: "{}" });
+  await api(`/api/v1/uploads/${session.id}/complete`, { method: "POST", body: "{}", signal: options.signal ?? null });
   return { fileId: session.fileId, secureTransfer: session.secureTransfer };
 }

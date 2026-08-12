@@ -70,7 +70,7 @@ form { display: grid; gap: 18px; }
 }
 .primary-button { color: #00130f; background: var(--cyan); border: 1px solid var(--cyan); }
 .primary-button:hover:not(:disabled) { background: #75f4df; }
-.primary-button:disabled { cursor: wait; opacity: .55; }
+.primary-button:disabled { cursor: not-allowed; opacity: .55; }
 .secondary-button { color: #dffbf6; border: 1px solid #355361; background: #0b1a24; }
 .secondary-button.small, .danger-button.small { min-height: 38px; padding: 7px 12px; font-size: 13px; }
 .danger-button { color: #fff1f2; border: 1px solid rgba(255, 129, 139, .7); background: rgba(151, 27, 40, .42); }
@@ -285,6 +285,11 @@ form { display: grid; gap: 18px; }
 .scan-status.rejected { border-color: rgba(255, 83, 96, .4); color: #ffd9dc; background: rgba(255, 83, 96, .08); }
 .scan-status.rejected > span { background: #ff5360; box-shadow: 0 0 12px rgba(255, 83, 96, .7); }
 @keyframes status-pulse { 50% { opacity: .35; transform: scale(.72); } }
+.selection-ready { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid rgba(43, 230, 197, .28); border-radius: 11px; color: #dffff9; background: rgba(43, 230, 197, .065); }
+.selection-ready > span { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: 9px; color: #061b18; background: var(--cyan); font-size: 12px; font-weight: 900; }
+.selection-ready strong, .selection-ready small { display: block; }
+.selection-ready small { margin-top: 3px; color: var(--muted); line-height: 1.4; }
+.upload-start-button:not(:disabled) { box-shadow: 0 0 0 1px rgba(43, 230, 197, .2), 0 12px 28px rgba(43, 230, 197, .12); }
 .workspace-main-grid { display: grid; grid-template-columns: minmax(500px, 1.15fr) minmax(380px, .85fr); gap: 18px; align-items: start; }
 .upload-card { margin-top: 0; }
 .featured-card { position: relative; overflow: hidden; border-top-color: rgba(43, 230, 197, .62); }
@@ -292,6 +297,7 @@ form { display: grid; gap: 18px; }
 .delivery-mode button { min-height: 82px; border-radius: 12px; background: rgba(5, 17, 25, .74); }
 .delivery-mode button.active { border-color: rgba(43, 230, 197, .72); }
 .drop-zone { min-height: 150px; border-color: rgba(82, 169, 255, .45); background: linear-gradient(145deg, rgba(6, 20, 29, .88), rgba(8, 27, 37, .72)); }
+.drop-zone.disabled { cursor: not-allowed; border-style: solid; border-color: rgba(99, 126, 139, .26); opacity: .68; }
 .transfer-list-card { margin-top: 0; }
 .transfer-row { border-color: rgba(63, 99, 117, .33); }
 .file-columns { gap: 18px; margin-top: 18px; }
