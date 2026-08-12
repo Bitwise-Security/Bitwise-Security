@@ -52,6 +52,7 @@ async function scanFile(file: ScanFile): Promise<void> {
   let key: Buffer | undefined;
   let scanInput: PassThrough | undefined;
   let scanPromise: Promise<Awaited<ReturnType<ReturnType<typeof getMalwareScanner>["scan"]>>> | undefined;
+  let failurePhase = "KEY_UNWRAP";
   try {
     key = await getFileKeyProvider().unwrap(file.wrapped_dek, file.key_version);
     const plaintextHash = createHash("sha256");
@@ -69,12 +70,14 @@ async function scanFile(file: ScanFile): Promise<void> {
         Number(file.plaintext_size) - (partNumber - 1) * file.chunk_size,
       );
       const ciphertextLength = plaintextLength + 16;
+      failurePhase = "STORAGE_READ";
       const encrypted = await storage.readPart(
         file.storage_key,
         partNumber,
         storage.mode === "local" ? 0 : absoluteOffset,
         ciphertextLength,
       );
+      failurePhase = "DECRYPT";
       const plaintext = decryptChunk(
         encrypted,
         key,
@@ -91,6 +94,7 @@ async function scanFile(file: ScanFile): Promise<void> {
       absoluteOffset += ciphertextLength;
     }
     scanInput.end();
+    failurePhase = "SCANNER_RESULT";
     const [scanResult, typeResult] = await Promise.all([
       scanPromise,
       verifyDetectedType(file.display_name, firstBytes),
@@ -188,10 +192,10 @@ async function scanFile(file: ScanFile): Promise<void> {
     await getPool().query(
       `UPDATE files SET status = CASE WHEN scan_attempts >= 3 THEN 'REJECTED'::file_status
                                      ELSE 'QUARANTINED'::file_status END,
-         rejection_code = CASE WHEN scan_attempts >= 3 THEN 'SCAN_FAILED' ELSE NULL END,
+         rejection_code = CASE WHEN scan_attempts >= 3 THEN $2 ELSE NULL END,
          updated_at = now()
        WHERE id = $1 AND status = 'SCANNING'`,
-      [file.id],
+      [file.id, `SCAN_FAILED_${failurePhase}`],
     );
   } finally {
     key?.fill(0);
