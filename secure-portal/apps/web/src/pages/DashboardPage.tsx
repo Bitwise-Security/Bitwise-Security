@@ -90,7 +90,11 @@ function AuditPanel() {
 function AdminPanel() {
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [clientMessage, setClientMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<ClientRecord | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const load = () => api<{ clients: ClientRecord[] }>("/api/v1/admin/clients")
     .then((response) => setClients(response.clients));
 
@@ -100,7 +104,7 @@ function AdminPanel() {
     const form = event.currentTarget;
     const data = formValues(event);
     setBusy(true);
-    setMessage(null);
+    setInviteMessage(null);
     try {
       await api("/api/v1/admin/clients/invitations", {
         method: "POST",
@@ -111,12 +115,39 @@ function AdminPanel() {
         }),
       });
       form.reset();
-      setMessage("Invitation sent. The client has 72 hours to finish setup.");
+      setInviteMessage("Invitation sent. The client has 72 hours to finish setup.");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Invitation could not be sent.");
+      setInviteMessage(error instanceof Error ? error.message : "Invitation could not be sent.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const openClientDeletion = (client: ClientRecord) => {
+    setDeleteCandidate(client);
+    setDeleteConfirmation("");
+    setClientMessage(null);
+  };
+
+  const deleteClient = async () => {
+    if (!deleteCandidate || deleteConfirmation.trim().toLowerCase() !== deleteCandidate.email.toLowerCase()) return;
+    setDeletingClientId(deleteCandidate.id);
+    setClientMessage(null);
+    try {
+      await api(`/api/v1/admin/clients/${deleteCandidate.id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ confirmation: deleteConfirmation }),
+      });
+      const deletedEmail = deleteCandidate.email;
+      setDeleteCandidate(null);
+      setDeleteConfirmation("");
+      setClientMessage({ type: "success", text: `${deletedEmail} can no longer sign in. Existing spaces and administrator-shared files were preserved.` });
+      await load();
+    } catch (error) {
+      setClientMessage({ type: "error", text: error instanceof Error ? error.message : "The client account could not be deleted." });
+    } finally {
+      setDeletingClientId(null);
     }
   };
 
@@ -131,7 +162,7 @@ function AdminPanel() {
         <p className="eyebrow">CLIENT ACCESS</p>
         <h2>Invite a client</h2>
         <p className="muted">The client receives a private setup link and must configure MFA.</p>
-        {message ? <Notice type={message.startsWith("Invitation sent") ? "success" : "error"}>{message}</Notice> : null}
+        {inviteMessage ? <Notice type={inviteMessage.startsWith("Invitation sent") ? "success" : "error"}>{inviteMessage}</Notice> : null}
         <form onSubmit={(event) => void invite(event)}>
           <Field label="Client name" name="displayName" autoComplete="off" />
           <Field label="Client email" name="email" type="email" autoComplete="off" />
@@ -144,10 +175,12 @@ function AdminPanel() {
           <div><p className="eyebrow">ISOLATED SPACES</p><h2>Clients</h2></div>
           <span className="count">{clients.length}</span>
         </div>
+        <p className="muted client-list-intro">Client accounts are optional. A space used only for a password-protected link does not need an invited client.</p>
+        {clientMessage ? <Notice type={clientMessage.type}>{clientMessage.text}</Notice> : null}
         {clients.length === 0 ? <p className="empty-state">No client spaces yet.</p> : (
           <div className="client-list">
             {clients.map((client) => (
-              <article className="client-row" key={client.id}>
+              <article className="client-row" key={`${client.id}:${client.space_id ?? "none"}`}>
                 <div className="avatar" aria-hidden="true">{client.display_name.slice(0, 1).toUpperCase()}</div>
                 <div className="client-main">
                   <strong>{client.display_name}</strong>
@@ -155,10 +188,27 @@ function AdminPanel() {
                 </div>
                 <div className="client-space">{client.space_name ?? "No space"}</div>
                 <span className={`status ${client.status.toLowerCase()}`}>{client.status.replace("_", " ")}</span>
+                <button className="danger-button small" type="button" disabled={deletingClientId !== null} onClick={() => openClientDeletion(client)}>Delete account</button>
               </article>
             ))}
           </div>
         )}
+        {deleteCandidate ? (
+          <section className="space-deletion-panel client-deletion-panel" role="alertdialog" aria-labelledby="delete-client-title" aria-describedby="delete-client-warning">
+            <p className="eyebrow">REMOVE PORTAL ACCESS</p>
+            <h2 id="delete-client-title">Delete {deleteCandidate.display_name}&apos;s account?</h2>
+            <p id="delete-client-warning">This permanently removes the login, invitation, MFA credentials and active sessions. The client&apos;s spaces and administrator-shared files remain, so you can continue using password-protected links.</p>
+            <p className="retention-note">If this client uploaded files, deletion is blocked until you permanently delete the spaces containing those files.</p>
+            <label className="field confirmation-field">
+              <span>Type <strong>{deleteCandidate.email}</strong> to confirm</span>
+              <input value={deleteConfirmation} type="email" autoComplete="off" onChange={(event) => setDeleteConfirmation(event.target.value)} />
+            </label>
+            <div className="deletion-actions">
+              <button className="secondary-button" type="button" disabled={deletingClientId !== null} onClick={() => { setDeleteCandidate(null); setDeleteConfirmation(""); }}>Cancel</button>
+              <button className="danger-button" type="button" disabled={deletingClientId !== null || deleteConfirmation.trim().toLowerCase() !== deleteCandidate.email.toLowerCase()} onClick={() => void deleteClient()}>{deletingClientId ? "Deleting securely…" : "Permanently delete account"}</button>
+            </div>
+          </section>
+        ) : null}
       </section>
       </div>
     </section>

@@ -10,11 +10,15 @@
     "test": "vitest run --coverage.enabled=false",
     "db:migrate:local": "wrangler d1 migrations apply bitwise-secure-portal-staging-db --local --config wrangler.staging.jsonc",
     "db:migrate:staging": "wrangler d1 migrations apply bitwise-secure-portal-staging-db --remote --config wrangler.staging.jsonc",
+    "db:migrate:production": "wrangler d1 migrations apply bitwise-secure-portal-db --remote --config wrangler.production.jsonc",
     "cf:types": "wrangler types --config wrangler.staging.jsonc worker-configuration.d.ts",
     "cf:check": "wrangler deploy --dry-run --containers-rollout=none --config wrangler.staging.jsonc",
+    "cf:check:production": "wrangler deploy --dry-run --config wrangler.production.jsonc",
     "cf:dev": "wrangler dev --config wrangler.staging.jsonc",
     "cf:bootstrap:staging": "wrangler deploy --config wrangler.bootstrap.jsonc",
-    "cf:deploy:staging": "wrangler deploy --config wrangler.staging.jsonc"
+    "cf:deploy:staging": "wrangler deploy --config wrangler.staging.jsonc",
+    "cf:bootstrap:production": "wrangler deploy --config wrangler.bootstrap.production.jsonc",
+    "cf:deploy:production": "wrangler deploy --config wrangler.production.jsonc"
   },
   "dependencies": {
     "@cloudflare/containers": "0.3.7"

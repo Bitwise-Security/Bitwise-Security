@@ -1,5 +1,17 @@
 # Cloudflare deployment scope
 
+The approved production deployment is restricted to these dedicated resources:
+
+- Worker: `bitwise-secure-portal`
+- Container and Durable Objects owned by that Worker
+- D1 database: `bitwise-secure-portal-db` (`e459184a-b22e-4285-acde-5886d65688b3`)
+- R2 bucket: `bitwise-secure-portal-files`
+- Custom hostname: `portal.bitwise-security.nl`
+
+Production has separate data and cryptographic secrets from staging. The provisioning
+script uses exact names and the pinned D1 identifier; it never lists, mutates, routes,
+or deletes another Cloudflare resource.
+
 The staging deployment is deliberately restricted to these new resources:
 
 - Worker: `bitwise-secure-portal-staging`
@@ -22,7 +34,4 @@ The following existing resources are explicitly out of scope:
 - The `bitwise-security` marketing Pages project
 - Its production deployment and Git integration
 - Every unrelated Worker, Pages project, R2 bucket, DNS record, and Cloudflare zone
-- `portal.bitwise-security.nl` until staging has passed the complete security checklist
-
-There is intentionally no production Wrangler configuration or production provisioning
-script yet. Production configuration will be created only after staging approval.
+- Every hostname other than `portal.bitwise-security.nl` and the staging hostname

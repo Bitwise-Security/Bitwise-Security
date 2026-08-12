@@ -68,4 +68,25 @@ describe("HTTP security boundary", () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toEqual({ error: "Untrusted request origin" });
   });
+
+  it("requires an authenticated admin before a client account can be deleted", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/admin/clients/10000000-0000-4000-8000-000000000002",
+      headers: { origin: "http://localhost:4100", "content-type": "application/json" },
+      payload: { confirmation: "client@example.test" },
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("rejects a hostile-origin client-account deletion before processing it", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/admin/clients/10000000-0000-4000-8000-000000000002",
+      headers: { origin: "https://attacker.example", "content-type": "application/json" },
+      payload: { confirmation: "client@example.test" },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "Untrusted request origin" });
+  });
 });

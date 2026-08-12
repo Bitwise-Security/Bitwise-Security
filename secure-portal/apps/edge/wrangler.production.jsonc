@@ -1,0 +1,77 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "account_id": "6931a6facc4105d469f43215d2c3fb23",
+  "name": "bitwise-secure-portal",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "portal.bitwise-security.nl",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://portal.bitwise-security.nl",
+    "DEPLOYMENT_ENVIRONMENT": "production",
+    "EMAIL_FROM": "Bitwise Secure Portal <portal@bitwise-security.nl>"
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "r2_buckets": [
+    {
+      "binding": "PORTAL_FILES",
+      "bucket_name": "bitwise-secure-portal-files"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "PORTAL_DB",
+      "database_name": "bitwise-secure-portal-db",
+      "database_id": "e459184a-b22e-4285-acde-5886d65688b3",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PORTAL_CONTAINER",
+        "class_name": "PortalContainer"
+      },
+      {
+        "name": "AUTH_RATE_LIMITER",
+        "class_name": "AuthRateLimiter"
+      }
+    ]
+  },
+  "containers": [
+    {
+      "class_name": "PortalContainer",
+      "image": "../../Dockerfile.cloudflare",
+      "instance_type": "standard-1",
+      "max_instances": 1
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PortalContainer", "AuthRateLimiter"]
+    }
+  ],
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "limits": {
+    "cpu_ms": 300000
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

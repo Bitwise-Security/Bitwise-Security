@@ -31,6 +31,9 @@ const deleteSpaceSchema = z.object({
   confirmation: z.string().min(1).max(160),
   deleteExclusiveClients: z.boolean().default(false),
 });
+const deleteClientSchema = z.object({
+  confirmation: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+});
 const PAGE_SIZE = 10;
 
 interface DeletionFile {
@@ -373,6 +376,90 @@ export function registerAdminRoutes(app: FastifyInstance): void {
         throw new AppError(503, "The account was created, but the invitation email could not be delivered", "EMAIL_FAILED");
       }
       return reply.code(201).send({ id: invited.userId, email: parsed.data.email });
+    },
+  );
+
+  app.delete(
+    "/api/v1/admin/clients/:userId",
+    {
+      preHandler: [requireAdmin, requireCsrf],
+      config: { rateLimit: { max: 10, timeWindow: "1 hour" } },
+    },
+    async (request, reply) => {
+      const params = userIdSchema.safeParse(request.params);
+      const body = deleteClientSchema.safeParse(request.body);
+      if (!params.success || !body.success) throw new AppError(400, "Invalid request", "INVALID_REQUEST");
+      const auth = request.auth!;
+      const result = await getPool().query<{
+        id: string;
+        email: string;
+        uploaded_file_count: number;
+        other_organization_count: number;
+      }>(
+        `SELECT u.id, u.email::text,
+                (SELECT COUNT(*) FROM files f WHERE f.uploader_user_id = u.id) AS uploaded_file_count,
+                (SELECT COUNT(*) FROM organization_memberships other
+                 WHERE other.user_id = u.id AND other.organization_id <> $1) AS other_organization_count
+         FROM users u
+         JOIN organization_memberships om ON om.user_id = u.id
+           AND om.organization_id = $1 AND om.role = 'CLIENT'
+         WHERE u.id = $2`,
+        [auth.organizationId, params.data.userId],
+      );
+      const client = result.rows[0];
+      if (!client) throw new AppError(404, "Client not found", "NOT_FOUND");
+      if (body.data.confirmation !== client.email.toLowerCase()) {
+        throw new AppError(400, "The confirmation does not match the client email", "CONFIRMATION_MISMATCH");
+      }
+      if (Number(client.other_organization_count) > 0) {
+        throw new AppError(409, "This account is connected to another organization and cannot be deleted here", "CLIENT_SHARED");
+      }
+      if (Number(client.uploaded_file_count) > 0) {
+        throw new AppError(
+          409,
+          "This client still owns uploaded files. Permanently delete the spaces containing those files first.",
+          "CLIENT_HAS_FILES",
+        );
+      }
+
+      try {
+        await getPool().batch([
+          {
+            sql: "DELETE FROM notification_outbox WHERE recipient_email = $1 COLLATE NOCASE",
+            params: [client.email],
+          },
+          {
+            sql: `DELETE FROM users
+                  WHERE id = $2
+                    AND EXISTS (
+                      SELECT 1 FROM organization_memberships om
+                      WHERE om.user_id = users.id AND om.organization_id = $1 AND om.role = 'CLIENT'
+                    )
+                    AND NOT EXISTS (SELECT 1 FROM files f WHERE f.uploader_user_id = users.id)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM organization_memberships other
+                      WHERE other.user_id = users.id AND other.organization_id <> $1
+                    )`,
+            params: [auth.organizationId, client.id],
+          },
+          auditEventQuery(request, {
+            organizationId: auth.organizationId,
+            actorUserId: auth.userId,
+            action: "CLIENT_ACCOUNT_DELETED",
+            targetType: "USER",
+            targetId: client.id,
+            outcome: "SUCCESS",
+            metadata: { spacesPreserved: true },
+          }),
+        ]);
+      } catch {
+        throw new AppError(
+          409,
+          "The account changed while deletion was in progress. Refresh the page and verify its files before trying again.",
+          "CLIENT_DELETE_CONFLICT",
+        );
+      }
+      return reply.code(204).send();
     },
   );
 
