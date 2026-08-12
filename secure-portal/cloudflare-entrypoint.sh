@@ -9,6 +9,13 @@ shutdown() {
 
 trap shutdown TERM INT EXIT
 
+cloudflare_ca=/etc/cloudflare/certs/cloudflare-containers-ca.crt
+if [[ -f "$cloudflare_ca" ]]; then
+  cp "$cloudflare_ca" /usr/local/share/ca-certificates/cloudflare-containers-ca.crt
+  update-ca-certificates >/dev/null
+  export NODE_EXTRA_CA_CERTS="$cloudflare_ca"
+fi
+
 mkdir -p /run/clamav /var/log/clamav
 chown -R clamav:clamav /run/clamav /var/log/clamav /var/lib/clamav
 
