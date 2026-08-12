@@ -238,8 +238,12 @@ export class PortalContainer extends Container<Cloudflare.Env> {
     SCANNER_MODE: "clamav",
     CLAMAV_HOST: "127.0.0.1",
     CLAMAV_PORT: "3310",
-    BOOTSTRAP_ADMIN_EMAIL: this.env.BOOTSTRAP_ADMIN_EMAIL ?? "",
-    BOOTSTRAP_ADMIN_PASSWORD: this.env.BOOTSTRAP_ADMIN_PASSWORD ?? "",
+    ...(this.env.BOOTSTRAP_ADMIN_EMAIL && this.env.BOOTSTRAP_ADMIN_PASSWORD
+      ? {
+          BOOTSTRAP_ADMIN_EMAIL: this.env.BOOTSTRAP_ADMIN_EMAIL,
+          BOOTSTRAP_ADMIN_PASSWORD: this.env.BOOTSTRAP_ADMIN_PASSWORD,
+        }
+      : {}),
   };
 }
 
