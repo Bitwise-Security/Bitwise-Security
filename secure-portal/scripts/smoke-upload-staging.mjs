@@ -110,6 +110,19 @@ async function main() {
   const spaceId = spaces.payload.spaces?.[0]?.id;
   if (typeof spaceId !== "string") throw new Error("No staging client space is available for the upload smoke test");
 
+  // Remove only artifacts created by earlier runs of this staging smoke test.
+  // Going through the API also removes the matching encrypted R2 objects and
+  // revokes any transfer records, avoiding orphaned test data.
+  const previousFiles = await jsonRequest(`${PORTAL_ORIGIN}/api/v1/spaces/${spaceId}/files`, { headers: authHeaders });
+  for (const file of previousFiles.payload.files ?? []) {
+    if (file.display_name === "portal-upload-smoke-test.pdf" && file.uploaded_by_me) {
+      await jsonRequest(`${PORTAL_ORIGIN}/api/v1/files/${file.id}`, {
+        method: "DELETE",
+        headers: mutationHeaders,
+      });
+    }
+  }
+
   const plaintext = Buffer.from("%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n", "utf8");
   let fileId;
   try {
@@ -153,8 +166,14 @@ async function main() {
     if (!credentials?.url || !credentials?.password) throw new Error("Secure-transfer credentials were not returned");
     let available = false;
     for (let attempt = 0; attempt < 60; attempt += 1) {
-      const listing = await jsonRequest(`${PORTAL_ORIGIN}/api/v1/spaces/${spaceId}/files`, { headers: authHeaders });
-      const file = listing.payload.files?.find((candidate) => candidate.id === fileId);
+      const response = await fetch(`${PORTAL_ORIGIN}/api/v1/spaces/${spaceId}/files`, { headers: authHeaders });
+      if ([500, 502, 503, 504].includes(response.status)) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        continue;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(`File polling failed with HTTP ${response.status}`);
+      const file = payload.files?.find((candidate) => candidate.id === fileId);
       if (file?.status === "AVAILABLE") { available = true; break; }
       if (file?.status === "REJECTED") throw new Error("The harmless smoke-test PDF was rejected by validation");
       await new Promise((resolve) => setTimeout(resolve, 2_000));

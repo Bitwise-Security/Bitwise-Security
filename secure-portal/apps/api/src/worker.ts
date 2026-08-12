@@ -49,17 +49,20 @@ async function claimFile(): Promise<ScanFile | null> {
 
 async function scanFile(file: ScanFile): Promise<void> {
   const storage = getStorage();
-  const key = await getFileKeyProvider().unwrap(file.wrapped_dek, file.key_version);
-  const plaintextHash = createHash("sha256");
-  const scanInput = new PassThrough({ highWaterMark: 1024 * 1024 });
-  const scanPromise = getMalwareScanner().scan(scanInput);
-  // The scanner connects while encrypted chunks are fetched and decrypted. Attach
-  // a handler immediately so an early socket failure cannot become an unhandled
-  // rejection and terminate the maintenance process before Promise.all awaits it.
-  void scanPromise.catch(() => undefined);
-  let firstBytes = Buffer.alloc(0);
-  let absoluteOffset = 0;
+  let key: Buffer | undefined;
+  let scanInput: PassThrough | undefined;
+  let scanPromise: Promise<Awaited<ReturnType<ReturnType<typeof getMalwareScanner>["scan"]>>> | undefined;
   try {
+    key = await getFileKeyProvider().unwrap(file.wrapped_dek, file.key_version);
+    const plaintextHash = createHash("sha256");
+    scanInput = new PassThrough({ highWaterMark: 1024 * 1024 });
+    scanPromise = getMalwareScanner().scan(scanInput);
+    // The scanner connects while encrypted chunks are fetched and decrypted. Attach
+    // a handler immediately so an early socket failure cannot become an unhandled
+    // rejection and terminate the maintenance process before Promise.all awaits it.
+    void scanPromise.catch(() => undefined);
+    let firstBytes = Buffer.alloc(0);
+    let absoluteOffset = 0;
     for (let partNumber = 1; partNumber <= file.chunk_count; partNumber += 1) {
       const plaintextLength = Math.min(
         file.chunk_size,
@@ -174,8 +177,8 @@ async function scanFile(file: ScanFile): Promise<void> {
       })));
     }
   } catch (error) {
-    scanInput.destroy(error as Error);
-    await scanPromise.catch(() => undefined);
+    scanInput?.destroy(error as Error);
+    await scanPromise?.catch(() => undefined);
     console.error(JSON.stringify({
       event: "file_scan_failed",
       fileId: file.id,
@@ -191,7 +194,7 @@ async function scanFile(file: ScanFile): Promise<void> {
       [file.id],
     );
   } finally {
-    key.fill(0);
+    key?.fill(0);
   }
 }
 
@@ -319,13 +322,26 @@ async function cleanupNextUpload(): Promise<boolean> {
   return true;
 }
 
+async function maintenanceStep<T>(name: string, operation: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "maintenance_step_failed",
+      step: name,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
+    return fallback;
+  }
+}
+
 try {
   while (!stopping) {
-    const file = await claimFile();
-    if (file) await scanFile(file);
-    const sentNotification = await sendNextNotification();
-    const expiredFile = await expireNextFile();
-    const cleanedUpload = await cleanupNextUpload();
+    const file = await maintenanceStep("claim_file", claimFile, null);
+    if (file) await maintenanceStep("scan_file", () => scanFile(file), undefined);
+    const sentNotification = await maintenanceStep("send_notification", sendNextNotification, false);
+    const expiredFile = await maintenanceStep("expire_file", expireNextFile, false);
+    const cleanedUpload = await maintenanceStep("cleanup_upload", cleanupNextUpload, false);
     if (!file && !sentNotification && !expiredFile && !cleanedUpload) await delay(5_000);
   }
 } finally {
