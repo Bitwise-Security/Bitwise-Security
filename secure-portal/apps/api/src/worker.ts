@@ -53,6 +53,10 @@ async function scanFile(file: ScanFile): Promise<void> {
   const plaintextHash = createHash("sha256");
   const scanInput = new PassThrough({ highWaterMark: 1024 * 1024 });
   const scanPromise = getMalwareScanner().scan(scanInput);
+  // The scanner connects while encrypted chunks are fetched and decrypted. Attach
+  // a handler immediately so an early socket failure cannot become an unhandled
+  // rejection and terminate the maintenance process before Promise.all awaits it.
+  void scanPromise.catch(() => undefined);
   let firstBytes = Buffer.alloc(0);
   let absoluteOffset = 0;
   try {

@@ -103,5 +103,6 @@ describe("file security", () => {
     const worker = await readFile(new URL("../src/worker.ts", import.meta.url), "utf8");
     expect(worker).toContain("WHERE id = $1 AND status = 'SCANNING' RETURNING id");
     expect(worker).toContain("WHERE id = $1 AND status = 'SCANNING'`");
+    expect(worker).toContain("void scanPromise.catch(() => undefined)");
   });
 });
