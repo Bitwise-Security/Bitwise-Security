@@ -91,13 +91,14 @@ async function scanFile(file: ScanFile): Promise<void> {
     if (!scanResult.clean || !typeResult.allowed) {
       const rejectionCode = !scanResult.clean ? "MALWARE_DETECTED" : (typeResult.reason ?? "CONTENT_TYPE_MISMATCH");
       const now = Date.now();
+      const transitioned = await getPool().query(
+        `UPDATE files SET status = 'REJECTED', rejection_code = $2,
+          detected_content_type = $3, scan_completed_at = $4, updated_at = $4
+         WHERE id = $1 AND status = 'SCANNING' RETURNING id`,
+        [file.id, rejectionCode, typeResult.detectedType, now],
+      );
+      if (!transitioned.rowCount) return;
       await getPool().batch([
-        {
-          sql: `UPDATE files SET status = 'REJECTED', rejection_code = $2,
-                detected_content_type = $3, scan_completed_at = $4, updated_at = $4
-                WHERE id = $1`,
-          params: [file.id, rejectionCode, typeResult.detectedType, now],
-        },
         {
           sql: `INSERT INTO audit_events
                   (organization_id, action, target_type, target_id, outcome, metadata)
@@ -114,13 +115,14 @@ async function scanFile(file: ScanFile): Promise<void> {
       return;
     }
     const now = Date.now();
+    const transitioned = await getPool().query(
+      `UPDATE files SET status = 'AVAILABLE', plaintext_sha256 = $2,
+        detected_content_type = $3, scan_completed_at = $4, updated_at = $4
+       WHERE id = $1 AND status = 'SCANNING' RETURNING id`,
+      [file.id, plaintextHash.digest("hex"), typeResult.detectedType, now],
+    );
+    if (!transitioned.rowCount) return;
     await getPool().batch([
-      {
-        sql: `UPDATE files SET status = 'AVAILABLE', plaintext_sha256 = $2,
-              detected_content_type = $3, scan_completed_at = $4, updated_at = $4
-              WHERE id = $1`,
-        params: [file.id, plaintextHash.digest("hex"), typeResult.detectedType, now],
-      },
       {
         sql: `INSERT INTO audit_events
                 (organization_id, action, target_type, target_id, outcome, metadata)
@@ -170,12 +172,18 @@ async function scanFile(file: ScanFile): Promise<void> {
   } catch (error) {
     scanInput.destroy(error as Error);
     await scanPromise.catch(() => undefined);
+    console.error(JSON.stringify({
+      event: "file_scan_failed",
+      fileId: file.id,
+      attempt: file.scan_attempts,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
     await getPool().query(
       `UPDATE files SET status = CASE WHEN scan_attempts >= 3 THEN 'REJECTED'::file_status
                                      ELSE 'QUARANTINED'::file_status END,
          rejection_code = CASE WHEN scan_attempts >= 3 THEN 'SCAN_FAILED' ELSE NULL END,
          updated_at = now()
-       WHERE id = $1`,
+       WHERE id = $1 AND status = 'SCANNING'`,
       [file.id],
     );
   } finally {

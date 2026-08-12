@@ -98,4 +98,10 @@ describe("file security", () => {
     expect(source).toContain("status = 'REVOKED'");
     expect(source).toContain("status !== \"AVAILABLE\"");
   });
+
+  it("prevents a late scanner from resurrecting a deleted file", async () => {
+    const worker = await readFile(new URL("../src/worker.ts", import.meta.url), "utf8");
+    expect(worker).toContain("WHERE id = $1 AND status = 'SCANNING' RETURNING id");
+    expect(worker).toContain("WHERE id = $1 AND status = 'SCANNING'`");
+  });
 });
