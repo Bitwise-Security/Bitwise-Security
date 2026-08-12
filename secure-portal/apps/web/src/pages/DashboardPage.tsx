@@ -3,7 +3,8 @@ import type { FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth-context";
-import { Field, Notice, SubmitButton, formValues } from "../components";
+import { Field, Notice, Pagination, SubmitButton, formValues } from "../components";
+import type { PaginationState } from "../components";
 import { FileTransferPanel } from "../FileTransferPanel";
 
 interface ClientRecord {
@@ -29,32 +30,39 @@ interface AuditEvent {
 
 function AuditPanel() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationState>({ page: 1, pageSize: 10, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
-  const load = async () => {
+  const load = async (requestedPage = page) => {
     setLoading(true);
     try {
-      const response = await api<{ events: AuditEvent[] }>("/api/v1/admin/audit-events?limit=50");
+      const response = await api<{ events: AuditEvent[]; pagination: PaginationState }>(`/api/v1/admin/audit-events?page=${requestedPage}`);
       setEvents(response.events);
+      setPagination(response.pagination);
+      if (response.pagination.page !== requestedPage) setPage(response.pagination.page);
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => {
     let active = true;
-    void api<{ events: AuditEvent[] }>("/api/v1/admin/audit-events?limit=50")
+    void api<{ events: AuditEvent[]; pagination: PaginationState }>(`/api/v1/admin/audit-events?page=${page}`)
       .then((response) => {
-        if (active) setEvents(response.events);
+        if (!active) return;
+        setEvents(response.events);
+        setPagination(response.pagination);
+        if (response.pagination.page !== page) setPage(response.pagination.page);
       })
       .finally(() => {
         if (active) setLoading(false);
-      });
+    });
     return () => { active = false; };
-  }, []);
+  }, [page]);
   return (
     <section className="card audit-card">
       <div className="card-heading">
         <div><p className="eyebrow">SECURITY RECORD</p><h2>Recent audit activity</h2></div>
-        <button className="secondary-button small" type="button" onClick={() => void load()}>Refresh</button>
+        <button className="secondary-button small" type="button" disabled={loading} onClick={() => void load()}>{loading ? "Refreshing…" : "Refresh"}</button>
       </div>
       {loading ? <p className="empty-state">Loading audit activity…</p> : (
         <div className="audit-table" role="table" aria-label="Recent audit activity">
@@ -68,6 +76,7 @@ function AuditPanel() {
           {events.length === 0 ? <p className="empty-state">No audit events recorded yet.</p> : null}
         </div>
       )}
+      <Pagination value={pagination} itemLabel="records" disabled={loading} onChange={(nextPage) => { setLoading(true); setPage(nextPage); }} />
     </section>
   );
 }

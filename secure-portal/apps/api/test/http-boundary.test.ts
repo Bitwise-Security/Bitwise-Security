@@ -47,4 +47,25 @@ describe("HTTP security boundary", () => {
       code: "TRANSFER_UNAVAILABLE",
     });
   });
+
+  it("requires an authenticated admin before a client space can be deleted", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/admin/spaces/10000000-0000-4000-8000-000000000001",
+      headers: { origin: "http://localhost:4100", "content-type": "application/json" },
+      payload: { confirmation: "Example client", deleteExclusiveClients: false },
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("rejects a hostile-origin client-space deletion before processing it", async () => {
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/admin/spaces/10000000-0000-4000-8000-000000000001",
+      headers: { origin: "https://attacker.example", "content-type": "application/json" },
+      payload: { confirmation: "Example client", deleteExclusiveClients: true },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "Untrusted request origin" });
+  });
 });

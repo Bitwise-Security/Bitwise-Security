@@ -23,7 +23,9 @@ export interface AuthorizedFile {
 }
 
 export const FILE_ACCESS_SQL = `SELECT f.* FROM files f
+     JOIN client_spaces cs ON cs.id = f.space_id
      WHERE f.id = $2 AND f.organization_id = $1 AND f.deleted_at IS NULL
+       AND cs.organization_id = $1 AND cs.archived_at IS NULL
        AND (
          $3 = 'ADMIN'
          OR EXISTS (

@@ -64,8 +64,10 @@ async function findOwnedUpload(request: FastifyRequest, uploadId: string) {
             f.chunk_count, f.nonce_prefix, f.wrapped_dek, f.key_version
      FROM upload_sessions us
      JOIN files f ON f.id = us.file_id AND f.status = 'UPLOADING'
+     JOIN client_spaces cs ON cs.id = f.space_id AND cs.archived_at IS NULL
      WHERE us.id = $1 AND us.created_by = $2 AND us.state = 'OPEN'
-       AND us.expires_at > now() AND f.organization_id = $3`,
+       AND us.expires_at > now() AND f.organization_id = $3
+       AND cs.organization_id = $3`,
     [uploadId, auth.userId, auth.organizationId],
   );
   return result.rows[0] ?? null;

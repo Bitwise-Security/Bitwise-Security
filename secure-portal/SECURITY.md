@@ -52,8 +52,8 @@ or an explicit space membership. Object UUIDs are identifiers, never authorizati
 | Area | Endpoints |
 | --- | --- |
 | Authentication | `/api/v1/auth/login`, `/mfa`, `/logout`, `/me`, invitation, MFA enrolment, password-reset request/confirm |
-| Administration | `/api/v1/admin/clients`, client status/MFA reset, `/api/v1/admin/audit-events` |
-| Spaces | `/api/v1/spaces`, `/api/v1/spaces/:id/files`, admin creation without a client account |
+| Administration | `/api/v1/admin/clients`, client status/MFA reset, paginated `/api/v1/admin/audit-events` |
+| Spaces | `/api/v1/spaces`, `/api/v1/spaces/:id/files`, admin creation, deletion summary, permanent deletion |
 | Upload | create under a space, resume state, exact-part URL, confirm part, complete, abort |
 | File management | `PATCH /api/v1/files/:id`, `DELETE /api/v1/files/:id` |
 | Download | create authenticated ticket, then consume it once at `/api/v1/downloads/:ticket` |
@@ -84,6 +84,7 @@ chunks pass through narrowly scoped internal R2 binding operations.
 | Audit tampering | No update/delete code path plus database append-only trigger | Migration and audit service |
 | Mail outage/duplication | Transactional outbox, retry schedule, Resend idempotency key | Worker and mail adapter |
 | Expired/abandoned data | Worker deletes expired files and abandoned multipart uploads | Worker maintenance loop |
+| Post-engagement data retention | Admin-only, CSRF-protected, rate-limited space deletion first revokes access, then removes R2 objects and cascaded D1 metadata; exact-name confirmation prevents accidental deletion | Admin routes, authorization SQL, R2 binding, D1 foreign keys |
 
 Residual risk: a fully compromised API container can access the active wrapping-key
 ring and can therefore read files. Isolation, constrained egress, deployment review,

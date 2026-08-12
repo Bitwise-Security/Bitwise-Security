@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { api } from "./api";
 import { uploadEncryptedFile } from "./file-upload";
-import { Notice } from "./components";
+import { Notice, Pagination } from "./components";
+import type { PaginationState } from "./components";
 
 interface Space { id: string; name: string }
 interface PortalFile {
@@ -27,6 +28,14 @@ interface OneTimeCredentials {
   url: string;
   password: string;
   expiresAt: string;
+}
+interface SpaceDeletionSummary {
+  id: string;
+  name: string;
+  fileCount: number;
+  secureTransferCount: number;
+  clientAccountCount: number;
+  exclusiveClientCount: number;
 }
 
 function formatBytes(value: string | number): string {
@@ -108,15 +117,25 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
   const [deliveryMode, setDeliveryMode] = useState<"PORTAL" | "PASSWORD_LINK">("PORTAL");
   const [secureTransfer, setSecureTransfer] = useState<OneTimeCredentials | null>(null);
   const [transfers, setTransfers] = useState<SecureTransfer[]>([]);
+  const [transferPage, setTransferPage] = useState(1);
+  const [transferPagination, setTransferPagination] = useState<PaginationState>({ page: 1, pageSize: 10, total: 0, totalPages: 1 });
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState("");
   const [creatingSpace, setCreatingSpace] = useState(false);
+  const [deletionSummary, setDeletionSummary] = useState<SpaceDeletionSummary | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteExclusiveClients, setDeleteExclusiveClients] = useState(false);
+  const [deletingSpace, setDeletingSpace] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadSpaces = useCallback(async (selectId?: string) => {
     const result = await api<{ spaces: Space[] }>("/api/v1/spaces");
     setSpaces(result.spaces);
-    setSpaceId((current) => selectId ?? (current || result.spaces[0]?.id || ""));
+    setSpaceId((current) => {
+      if (selectId && result.spaces.some((space) => space.id === selectId)) return selectId;
+      if (result.spaces.some((space) => space.id === current)) return current;
+      return result.spaces[0]?.id ?? "";
+    });
   }, []);
 
   useEffect(() => {
@@ -124,7 +143,7 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
     void api<{ spaces: Space[] }>("/api/v1/spaces").then((result) => {
       if (!active) return;
       setSpaces(result.spaces);
-      setSpaceId((current) => current || result.spaces[0]?.id || "");
+      setSpaceId((current) => result.spaces.some((space) => space.id === current) ? current : (result.spaces[0]?.id ?? ""));
     });
     return () => { active = false; };
   }, []);
@@ -133,36 +152,54 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
     if (!spaceId) return;
     const result = await api<{ files: PortalFile[] }>(`/api/v1/spaces/${spaceId}/files`);
     setFiles(result.files);
-    if (role === "ADMIN") {
-      const transferResult = await api<{ transfers: SecureTransfer[] }>(`/api/v1/spaces/${spaceId}/secure-transfers`);
-      setTransfers(transferResult.transfers);
-    }
-  }, [role, spaceId]);
+  }, [spaceId]);
+
+  const loadTransfers = useCallback(async (requestedPage = transferPage) => {
+    if (role !== "ADMIN" || !spaceId) return;
+    const result = await api<{ transfers: SecureTransfer[]; pagination: PaginationState }>(
+      `/api/v1/spaces/${spaceId}/secure-transfers?page=${requestedPage}`,
+    );
+    setTransfers(result.transfers);
+    setTransferPagination(result.pagination);
+    if (result.pagination.page !== requestedPage) setTransferPage(result.pagination.page);
+  }, [role, spaceId, transferPage]);
 
   useEffect(() => {
     if (!spaceId) return;
     let active = true;
-    const initial = role === "ADMIN"
-      ? Promise.all([
-          api<{ files: PortalFile[] }>(`/api/v1/spaces/${spaceId}/files`),
-          api<{ transfers: SecureTransfer[] }>(`/api/v1/spaces/${spaceId}/secure-transfers`),
-        ]).then(([fileResult, transferResult]) => {
-          if (!active) return;
-          setFiles(fileResult.files);
-          setTransfers(transferResult.transfers);
-        })
-      : api<{ files: PortalFile[] }>(`/api/v1/spaces/${spaceId}/files`).then((fileResult) => {
-          if (active) setFiles(fileResult.files);
-        });
-    void initial;
+    void api<{ files: PortalFile[] }>(`/api/v1/spaces/${spaceId}/files`).then((fileResult) => {
+      if (active) setFiles(fileResult.files);
+    });
     const timer = window.setInterval(() => void loadFiles(), 5_000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [role, spaceId, loadFiles]);
+  }, [spaceId, loadFiles]);
+
+  useEffect(() => {
+    if (role !== "ADMIN" || !spaceId) return;
+    let active = true;
+    void api<{ transfers: SecureTransfer[]; pagination: PaginationState }>(
+      `/api/v1/spaces/${spaceId}/secure-transfers?page=${transferPage}`,
+    ).then((result) => {
+      if (!active) return;
+      setTransfers(result.transfers);
+      setTransferPagination(result.pagination);
+      if (result.pagination.page !== transferPage) setTransferPage(result.pagination.page);
+    });
+    const timer = window.setInterval(() => void loadTransfers(), 5_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [role, spaceId, transferPage, loadTransfers]);
 
   const choose = (fileList: FileList | null) => {
     setSelected(fileList?.item(0) ?? null);
     setMessage(null);
     setSecureTransfer(null);
+  };
+  const changeSpace = (nextSpaceId: string) => {
+    setSpaceId(nextSpaceId);
+    setTransferPage(1);
+    setDeletionSummary(null);
+    setDeleteConfirmation("");
+    setDeleteExclusiveClients(false);
   };
   const drop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -211,6 +248,10 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
       }
       setSelected(null);
       await loadFiles();
+      if (role === "ADMIN") {
+        setTransferPage(1);
+        await loadTransfers(1);
+      }
     } catch (error) {
       setMessageType("error");
       setMessage(error instanceof Error ? error.message : "The upload could not be completed.");
@@ -247,10 +288,52 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
       await api<void>(`/api/v1/secure-transfers/${id}`, { method: "DELETE" });
       setMessageType("success");
       setMessage("Password-protected link revoked.");
-      await loadFiles();
+      await loadTransfers();
     } catch (error) {
       setMessageType("error");
       setMessage(error instanceof Error ? error.message : "The link could not be revoked.");
+    }
+  };
+
+  const openSpaceDeletion = async () => {
+    if (!spaceId) return;
+    setMessage(null);
+    try {
+      const summary = await api<SpaceDeletionSummary>(`/api/v1/admin/spaces/${spaceId}/deletion-summary`);
+      setDeletionSummary(summary);
+      setDeleteConfirmation("");
+      setDeleteExclusiveClients(false);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error instanceof Error ? error.message : "The deletion summary could not be loaded.");
+    }
+  };
+
+  const deleteSpace = async () => {
+    if (!deletionSummary || deleteConfirmation !== deletionSummary.name) return;
+    setDeletingSpace(true);
+    setMessage(null);
+    try {
+      await api<void>(`/api/v1/admin/spaces/${deletionSummary.id}`, {
+        method: "DELETE",
+        body: JSON.stringify({
+          confirmation: deleteConfirmation,
+          deleteExclusiveClients,
+        }),
+      });
+      setDeletionSummary(null);
+      setDeleteConfirmation("");
+      setFiles([]);
+      setTransfers([]);
+      setTransferPagination({ page: 1, pageSize: 10, total: 0, totalPages: 1 });
+      await loadSpaces();
+      setMessageType("success");
+      setMessage("The client space, encrypted files and protected links were permanently deleted.");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error instanceof Error ? error.message : "The client space could not be deleted.");
+    } finally {
+      setDeletingSpace(false);
     }
   };
 
@@ -267,14 +350,44 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
       {role === "ADMIN" ? (
         <div className="space-controls">
           {spaces.length > 0 ? (
-            <label className="space-picker">Client space<select value={spaceId} onChange={(event) => setSpaceId(event.target.value)}>{spaces.map((space) => <option value={space.id} key={space.id}>{space.name}</option>)}</select></label>
+            <label className="space-picker">Client space<select value={spaceId} onChange={(event) => changeSpace(event.target.value)}>{spaces.map((space) => <option value={space.id} key={space.id}>{space.name}</option>)}</select></label>
           ) : <Notice type="info">Create a client space to start sharing files.</Notice>}
-          <button className="secondary-button small" type="button" onClick={() => setShowSpaceCreator((value) => !value)}>{showSpaceCreator ? "Cancel" : "New space without login"}</button>
+          <div className="space-action-buttons">
+            <button className="secondary-button small" type="button" onClick={() => setShowSpaceCreator((value) => !value)}>{showSpaceCreator ? "Cancel" : "New space without login"}</button>
+            <button className="danger-button small" type="button" disabled={!spaceId} onClick={() => void openSpaceDeletion()}>Delete current space</button>
+          </div>
           {showSpaceCreator ? (
             <div className="inline-space-form">
               <label className="field"><span>Client or project name</span><input value={newSpaceName} maxLength={160} onChange={(event) => setNewSpaceName(event.target.value)} /></label>
               <button className="primary-button" type="button" disabled={creatingSpace || !newSpaceName.trim()} onClick={() => void createSpace()}>{creatingSpace ? "Creating…" : "Create private space"}</button>
             </div>
+          ) : null}
+          {deletionSummary ? (
+            <section className="space-deletion-panel" role="alertdialog" aria-labelledby="delete-space-title" aria-describedby="delete-space-warning">
+              <p className="eyebrow">PERMANENT GDPR DELETION</p>
+              <h2 id="delete-space-title">Delete “{deletionSummary.name}”?</h2>
+              <p id="delete-space-warning">This permanently removes the space, {deletionSummary.fileCount} encrypted file{deletionSummary.fileCount === 1 ? "" : "s"}, {deletionSummary.secureTransferCount} protected link{deletionSummary.secureTransferCount === 1 ? "" : "s"}, and unfinished upload data. It cannot be undone.</p>
+              <dl className="deletion-summary">
+                <div><dt>Files</dt><dd>{deletionSummary.fileCount}</dd></div>
+                <div><dt>Protected links</dt><dd>{deletionSummary.secureTransferCount}</dd></div>
+                <div><dt>Client accounts</dt><dd>{deletionSummary.clientAccountCount}</dd></div>
+              </dl>
+              <p className="retention-note">Minimal security audit records are retained for accountability. They do not contain the file contents.</p>
+              {deletionSummary.exclusiveClientCount > 0 ? (
+                <label className="deletion-checkbox">
+                  <input type="checkbox" checked={deleteExclusiveClients} onChange={(event) => setDeleteExclusiveClients(event.target.checked)} />
+                  Also delete {deletionSummary.exclusiveClientCount} client account{deletionSummary.exclusiveClientCount === 1 ? "" : "s"} used only by this space
+                </label>
+              ) : null}
+              <label className="field confirmation-field">
+                <span>Type <strong>{deletionSummary.name}</strong> to confirm</span>
+                <input value={deleteConfirmation} autoComplete="off" onChange={(event) => setDeleteConfirmation(event.target.value)} />
+              </label>
+              <div className="deletion-actions">
+                <button className="secondary-button" type="button" disabled={deletingSpace} onClick={() => { setDeletionSummary(null); setDeleteConfirmation(""); }}>Cancel</button>
+                <button className="danger-button" type="button" disabled={deletingSpace || deleteConfirmation !== deletionSummary.name} onClick={() => void deleteSpace()}>{deletingSpace ? "Deleting securely…" : "Permanently delete space"}</button>
+              </div>
+            </section>
           ) : null}
         </div>
       ) : null}
@@ -318,10 +431,11 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
           </section>
         ) : null}
       </section>
-      {role === "ADMIN" && transfers.length > 0 ? (
+      {role === "ADMIN" && transferPagination.total > 0 ? (
         <section className="card transfer-list-card">
-          <h2>Password-protected links</h2>
+          <div className="card-heading"><h2>Password-protected links</h2><span className="count">{transferPagination.total}</span></div>
           {transfers.map((transfer) => <article className="transfer-row" key={transfer.id}><div><strong>{transfer.display_name}</strong><span>{transfer.status.replaceAll("_", " ")} · {transfer.download_count} downloads · expires {new Date(transfer.expires_at).toLocaleDateString()}</span></div>{transfer.status === "ACTIVE" || transfer.status === "PENDING_SCAN" ? <button className="danger-link" type="button" onClick={() => void revokeTransfer(transfer.id)}>Revoke link</button> : null}</article>)}
+          <Pagination value={transferPagination} itemLabel="links" disabled={progress != null} onChange={setTransferPage} />
         </section>
       ) : null}
       <div className="file-columns">

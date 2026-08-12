@@ -26,11 +26,15 @@ OWASP self-review, and residual risks.
 - Uploaders may choose an expiry date. Display names can be changed without
   changing the private storage key.
 - Administrators can review authentication, file, and permission activity in the
-  audit view.
+  audit view. Audit records and protected-link lists use ten-item pages.
 - For an occasional recipient, an administrator can create a client/project space
   without an account and issue a password-protected transfer. The generated link
   and one-time-shown password must be sent over separate channels. The file remains
   quarantined until scanning passes, can be revoked, and is deleted after seven days.
+- When an engagement ends, an administrator can permanently delete its client space.
+  The confirmation screen shows the affected file, link, and account counts and
+  requires the exact space name. Exclusive client accounts may be deleted with the
+  space; minimal content-free security audit evidence is retained.
 
 ## Local evaluation with Docker Compose
 
@@ -201,6 +205,9 @@ Docker integration verification:
 11. Create a password-protected transfer, verify a wrong password is denied, verify
     the correct password returns a 60-second ticket, and verify that ticket cannot be
     reused. Revoke a second link and confirm it remains unavailable.
+12. Create a disposable space and file, request its deletion summary, then permanently
+    delete it. Confirm the R2 object is absent, the link and file IDs return `404`, the
+    space no longer appears, and a minimal successful deletion audit event remains.
 
 ## Operations checklist
 

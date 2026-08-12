@@ -16,6 +16,10 @@ const unlockSchema = z.object({
 });
 const ticketParams = z.object({ ticket: z.string().min(40).max(100) });
 const idParams = z.object({ id: z.string().uuid() });
+const pageQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+});
+const PAGE_SIZE = 10;
 
 interface TransferFile extends AuthorizedFile {
   transfer_id: string;
@@ -37,19 +41,33 @@ export function registerSecureTransferRoutes(app: FastifyInstance): void {
     { preHandler: requireAdmin },
     async (request) => {
       const params = idParams.safeParse(request.params);
-      if (!params.success || !(await canAccessSpace(request.auth!, params.data.id))) {
+      const query = pageQuerySchema.safeParse(request.query);
+      if (!params.success || !query.success || !(await canAccessSpace(request.auth!, params.data.id))) {
         throw new AppError(404, "Space not found", "NOT_FOUND");
       }
+      const count = await getPool().query<{ total: number }>(
+        `SELECT COUNT(*) AS total
+         FROM secure_transfers st JOIN files f ON f.id = st.file_id
+         WHERE f.organization_id = $1 AND f.space_id = $2`,
+        [request.auth!.organizationId, params.data.id],
+      );
+      const total = Number(count.rows[0]?.total ?? 0);
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      const page = Math.min(query.data.page, totalPages);
       const result = await getPool().query(
         `SELECT st.id, st.status, st.expires_at, st.download_count, st.created_at,
                 f.id AS file_id, f.display_name, f.status AS file_status
          FROM secure_transfers st
          JOIN files f ON f.id = st.file_id
          WHERE f.organization_id = $1 AND f.space_id = $2
-         ORDER BY st.created_at DESC`,
-        [request.auth!.organizationId, params.data.id],
+         ORDER BY st.created_at DESC
+         LIMIT $3 OFFSET $4`,
+        [request.auth!.organizationId, params.data.id, PAGE_SIZE, (page - 1) * PAGE_SIZE],
       );
-      return { transfers: result.rows };
+      return {
+        transfers: result.rows,
+        pagination: { page, pageSize: PAGE_SIZE, total, totalPages },
+      };
     },
   );
 
@@ -97,6 +115,7 @@ export function registerSecureTransferRoutes(app: FastifyInstance): void {
                 st.failed_attempts, st.locked_until, st.download_count
          FROM secure_transfers st
          JOIN files f ON f.id = st.file_id
+         JOIN client_spaces cs ON cs.id = f.space_id AND cs.archived_at IS NULL
          WHERE st.token_digest = $1`,
         [tokenDigest(body.data.token)],
       );
@@ -185,6 +204,7 @@ export function registerSecureTransferRoutes(app: FastifyInstance): void {
                 st.expires_at AS transfer_expires_at, st.password_hash,
                 st.failed_attempts, st.locked_until, st.download_count
          FROM secure_transfers st JOIN files f ON f.id = st.file_id
+         JOIN client_spaces cs ON cs.id = f.space_id AND cs.archived_at IS NULL
          WHERE st.id = $1`,
         [transferId],
       );
