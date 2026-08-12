@@ -37,6 +37,8 @@ interface SpaceDeletionSummary {
   clientAccountCount: number;
   exclusiveClientCount: number;
 }
+type TransferPhase = "selecting" | "uploading" | "scanning";
+type WorkflowPhase = TransferPhase | "ready" | "rejected";
 
 function formatBytes(value: string | number): string {
   const bytes = Number(value);
@@ -44,6 +46,18 @@ function formatBytes(value: string | number): string {
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
+function fileStatusLabel(status: string): string {
+  return {
+    QUARANTINED: "AWAITING SCAN",
+    SCANNING: "SCANNING",
+    AVAILABLE: "SCAN PASSED",
+    REJECTED: "BLOCKED BY SCAN",
+    UPLOADING: "UPLOADING",
+    DELETED: "DELETED",
+    EXPIRED: "EXPIRED",
+  }[status] ?? status.replaceAll("_", " ");
 }
 
 function FileList({ files, title, empty, role, onChanged }: {
@@ -87,7 +101,7 @@ function FileList({ files, title, empty, role, onChanged }: {
                 <strong>{file.display_name}</strong>
                 <span>{formatBytes(file.plaintext_size)} · {new Date(file.created_at).toLocaleDateString()}</span>
               </div>
-              <span className={`file-state ${file.status.toLowerCase()}`}>{file.status.replaceAll("_", " ")}</span>
+              <span className={`file-state ${file.status.toLowerCase()}`}>{fileStatusLabel(file.status)}</span>
               <div className="file-actions">
                 {file.status === "AVAILABLE" ? <button type="button" onClick={() => void download(file.id)}>Download</button> : null}
                 {(role === "ADMIN" || file.uploaded_by_me) && file.status !== "UPLOADING" ? (
@@ -111,6 +125,8 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
   const [files, setFiles] = useState<PortalFile[]>([]);
   const [selected, setSelected] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [transferPhase, setTransferPhase] = useState<TransferPhase>("selecting");
+  const [trackedFileId, setTrackedFileId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
   const [expiryDays, setExpiryDays] = useState("30");
@@ -191,6 +207,8 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
 
   const choose = (fileList: FileList | null) => {
     setSelected(fileList?.item(0) ?? null);
+    setTransferPhase("selecting");
+    setTrackedFileId(null);
     setMessage(null);
     setSecureTransfer(null);
   };
@@ -200,6 +218,8 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
     setDeletionSummary(null);
     setDeleteConfirmation("");
     setDeleteExclusiveClients(false);
+    setTransferPhase("selecting");
+    setTrackedFileId(null);
   };
   const drop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -229,6 +249,8 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
       return;
     }
     setProgress(0);
+    setTransferPhase("uploading");
+    setTrackedFileId(null);
     setMessage(null);
     setSecureTransfer(null);
     try {
@@ -239,12 +261,14 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
         deliveryMode,
         onProgress: setProgress,
       });
-      setMessageType("success");
+      setTrackedFileId(result.fileId);
+      setTransferPhase("scanning");
+      setMessageType("info");
       if (result.secureTransfer) {
         setSecureTransfer(result.secureTransfer);
-        setMessage("Secure link created. It becomes downloadable after the malware scan passes.");
+        setMessage("Secure link created. Follow the live security-scan status above; access activates only after the file passes.");
       } else {
-        setMessage("Upload complete. The file is quarantined while its type and malware scan are checked.");
+        setMessage("Upload complete. Follow the live security-scan status above; the file remains unavailable unless it passes.");
       }
       setSelected(null);
       await loadFiles();
@@ -253,6 +277,7 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
         await loadTransfers(1);
       }
     } catch (error) {
+      setTransferPhase("selecting");
       setMessageType("error");
       setMessage(error instanceof Error ? error.message : "The upload could not be completed.");
     } finally {
@@ -345,6 +370,12 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
 
   const sent = files.filter((file) => file.direction === "CLIENT_TO_ADMIN");
   const reports = files.filter((file) => file.direction === "ADMIN_TO_CLIENT");
+  const trackedFile = trackedFileId ? files.find((file) => file.id === trackedFileId) : null;
+  const workflowPhase: WorkflowPhase = transferPhase === "scanning" && trackedFile?.status === "AVAILABLE"
+    ? "ready"
+    : transferPhase === "scanning" && trackedFile?.status === "REJECTED"
+      ? "rejected"
+      : transferPhase;
   return (
     <section className="portal-section workspace-section" id="workspace">
       <div className="section-heading">
@@ -401,9 +432,17 @@ export function FileTransferPanel({ role }: { role: "ADMIN" | "CLIENT" }) {
         </div>
       ) : null}
       <div className="workflow-steps" aria-label="Secure transfer workflow">
-        <div className="active"><span>01</span><div><strong>{role === "ADMIN" ? "Choose recipient" : "Choose document"}</strong><small>{role === "ADMIN" ? "Portal access or protected link" : "Select an approved file type"}</small></div></div>
-        <div><span>02</span><div><strong>Encrypt and screen</strong><small>AES-GCM encryption and malware scan</small></div></div>
-        <div><span>03</span><div><strong>{role === "ADMIN" ? "Deliver securely" : "Track status"}</strong><small>{role === "ADMIN" ? "Controlled access with automatic expiry" : "See when the file is available"}</small></div></div>
+        <div className={workflowPhase === "selecting" ? "active" : "complete"} aria-current={workflowPhase === "selecting" ? "step" : undefined}><span>{workflowPhase === "selecting" ? "01" : "✓"}</span><div><strong>{role === "ADMIN" ? "Choose recipient" : "Choose document"}</strong><small>{workflowPhase === "selecting" ? (role === "ADMIN" ? "Select a workspace, delivery method and file" : "Select an approved file type") : "Selection complete"}</small></div></div>
+        <div className={workflowPhase === "uploading" || workflowPhase === "scanning" ? "active" : workflowPhase === "ready" ? "complete" : workflowPhase === "rejected" ? "error" : ""} aria-current={workflowPhase === "uploading" || workflowPhase === "scanning" ? "step" : undefined}><span>{workflowPhase === "ready" ? "✓" : workflowPhase === "rejected" ? "!" : "02"}</span><div><strong>{workflowPhase === "uploading" ? "Encrypting and uploading" : workflowPhase === "scanning" ? "Security scan running" : workflowPhase === "rejected" ? "File blocked" : "Encrypt and screen"}</strong><small>{workflowPhase === "uploading" ? `${progress ?? 0}% encrypted and uploaded` : workflowPhase === "scanning" ? "Quarantined until malware and file-type checks pass" : workflowPhase === "rejected" ? "The file was never made available" : "AES-GCM encryption and malware scan"}</small></div></div>
+        <div className={workflowPhase === "ready" ? "active complete" : ""} aria-current={workflowPhase === "ready" ? "step" : undefined}><span>{workflowPhase === "ready" ? "✓" : "03"}</span><div><strong>{workflowPhase === "ready" ? "Ready for secure delivery" : role === "ADMIN" ? "Deliver securely" : "Available to Bitwise"}</strong><small>{workflowPhase === "ready" ? "Scan passed and controlled access is active" : "Starts only after the security scan passes"}</small></div></div>
+      </div>
+      <div className={`scan-status ${workflowPhase}`} role="status" aria-live="polite">
+        <span aria-hidden="true" />
+        {workflowPhase === "selecting" ? "Step 1 of 3 — choose the delivery method and file." : null}
+        {workflowPhase === "uploading" ? `Step 2 of 3 — encrypting in your browser and uploading (${progress ?? 0}%).` : null}
+        {workflowPhase === "scanning" ? "Step 2 of 3 — upload complete; the quarantined file is being scanned. This page checks for the result automatically." : null}
+        {workflowPhase === "ready" ? "Step 3 of 3 — scan passed; the file is available through controlled access." : null}
+        {workflowPhase === "rejected" ? "Blocked — the file failed the malware or file-type scan and cannot be downloaded." : null}
       </div>
       <div className={role === "ADMIN" && transferPagination.total > 0 ? "workspace-main-grid" : ""}>
       <section className="card upload-card featured-card">

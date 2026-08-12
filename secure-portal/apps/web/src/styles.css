@@ -270,9 +270,21 @@ form { display: grid; gap: 18px; }
 .workflow-steps > div > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: #8db4c7; background: rgba(82, 169, 255, .07); font-size: 9px; font-weight: 900; }
 .workflow-steps > div.active { border-color: rgba(43, 230, 197, .3); background: linear-gradient(135deg, rgba(43, 230, 197, .075), rgba(7, 20, 29, .72)); }
 .workflow-steps > div.active > span { color: var(--cyan); background: rgba(43, 230, 197, .11); }
+.workflow-steps > div.complete { border-color: rgba(43, 230, 197, .24); background: rgba(43, 230, 197, .045); }
+.workflow-steps > div.complete > span { color: #061b18; background: var(--cyan); }
+.workflow-steps > div.error { border-color: rgba(255, 83, 96, .38); background: rgba(255, 83, 96, .065); }
+.workflow-steps > div.error > span { color: #fff; background: rgba(255, 83, 96, .7); }
 .workflow-steps strong, .workflow-steps small { display: block; }
 .workflow-steps strong { margin-bottom: 4px; font-size: 13px; }
 .workflow-steps small { color: var(--muted); font-size: 10px; line-height: 1.35; }
+.scan-status { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 10px 14px; margin: -5px 0 16px; border: 1px solid rgba(82, 169, 255, .2); border-radius: 11px; color: #b8d2df; background: rgba(82, 169, 255, .055); font-size: 12px; font-weight: 700; line-height: 1.45; }
+.scan-status > span { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #7294a5; }
+.scan-status.uploading > span, .scan-status.scanning > span { background: var(--blue); box-shadow: 0 0 12px var(--blue); animation: status-pulse 1.4s ease-in-out infinite; }
+.scan-status.ready { border-color: rgba(43, 230, 197, .3); color: #c9fff5; background: rgba(43, 230, 197, .07); }
+.scan-status.ready > span { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+.scan-status.rejected { border-color: rgba(255, 83, 96, .4); color: #ffd9dc; background: rgba(255, 83, 96, .08); }
+.scan-status.rejected > span { background: #ff5360; box-shadow: 0 0 12px rgba(255, 83, 96, .7); }
+@keyframes status-pulse { 50% { opacity: .35; transform: scale(.72); } }
 .workspace-main-grid { display: grid; grid-template-columns: minmax(500px, 1.15fr) minmax(380px, .85fr); gap: 18px; align-items: start; }
 .upload-card { margin-top: 0; }
 .featured-card { position: relative; overflow: hidden; border-top-color: rgba(43, 230, 197, .62); }
