@@ -12,6 +12,7 @@ import { getRedis } from "./redis.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFileRoutes } from "./routes/files.js";
+import { registerSecureTransferRoutes } from "./routes/secure-transfers.js";
 import { isOriginAllowed } from "./security/origin.js";
 import { authenticateRequest } from "./security/sessions.js";
 
@@ -36,6 +37,8 @@ export async function buildApp() {
           "body.token",
           "body.challengeToken",
           "body.enrollmentToken",
+          "body.password",
+          "body.token",
         ],
         censor: "[REDACTED]",
       },
@@ -107,6 +110,7 @@ export async function buildApp() {
   registerAuthRoutes(app);
   registerAdminRoutes(app);
   registerFileRoutes(app);
+  registerSecureTransferRoutes(app);
 
   app.setErrorHandler(async (error, request, reply) => {
     if (error instanceof AppError) {

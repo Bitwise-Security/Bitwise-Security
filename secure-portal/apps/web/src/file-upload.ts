@@ -8,6 +8,12 @@ interface UploadSession {
   noncePrefix: string;
   plaintextKey: string;
   completedParts: number[];
+  secureTransfer?: {
+    id: string;
+    url: string;
+    password: string;
+    expiresAt: string;
+  };
 }
 
 interface PartTarget {
@@ -30,20 +36,42 @@ function nonce(prefix: Uint8Array<ArrayBuffer>, partNumber: number): Uint8Array<
   return value;
 }
 
+export interface UploadResult {
+  fileId: string;
+  secureTransfer?: UploadSession["secureTransfer"];
+}
+
+function declaredContentType(file: File): string {
+  if (file.type) return file.type;
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  return {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".csv": "text/csv",
+    ".txt": "text/plain",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+  }[extension] ?? "application/octet-stream";
+}
+
 export async function uploadEncryptedFile(options: {
   spaceId: string;
   file: File;
   expiresInDays: number | null;
+  deliveryMode?: "PORTAL" | "PASSWORD_LINK";
   onProgress: (percentage: number) => void;
   signal?: AbortSignal;
-}): Promise<string> {
+}): Promise<UploadResult> {
   const session = await api<UploadSession>(`/api/v1/spaces/${options.spaceId}/uploads`, {
     method: "POST",
     body: JSON.stringify({
       displayName: options.file.name,
-      contentType: options.file.type || "application/octet-stream",
+      contentType: declaredContentType(options.file),
       size: options.file.size,
       expiresInDays: options.expiresInDays,
+      deliveryMode: options.deliveryMode ?? "PORTAL",
     }),
   });
   const keyBytes = decodeBase64(session.plaintextKey);
@@ -81,6 +109,5 @@ export async function uploadEncryptedFile(options: {
     options.onProgress(Math.round((partNumber / session.chunkCount) * 100));
   }
   await api(`/api/v1/uploads/${session.id}/complete`, { method: "POST", body: "{}" });
-  return session.fileId;
+  return { fileId: session.fileId, secureTransfer: session.secureTransfer };
 }
-

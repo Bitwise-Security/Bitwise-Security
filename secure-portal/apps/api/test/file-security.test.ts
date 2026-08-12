@@ -77,4 +77,25 @@ describe("file security", () => {
     expect(migration).toContain("audit_events_no_delete BEFORE DELETE ON audit_events");
     expect(migration).toContain("RAISE(ABORT, 'audit_events are append-only')");
   });
+
+  it("stores password-protected transfer credentials as digests and enforces expiry", async () => {
+    const migration = await readFile(
+      new URL("../../edge/migrations/0003_password_protected_transfers.sql", import.meta.url),
+      "utf8",
+    );
+    expect(migration).toContain("token_digest TEXT NOT NULL UNIQUE");
+    expect(migration).toContain("password_hash TEXT NOT NULL");
+    expect(migration).toContain("expires_at INTEGER NOT NULL");
+    expect(migration).not.toContain("password TEXT");
+    expect(migration).not.toContain("token TEXT");
+  });
+
+  it("binds secure-transfer administration to the authenticated organization and uses one-time tickets", async () => {
+    const source = await readFile(new URL("../src/routes/secure-transfers.ts", import.meta.url), "utf8");
+    expect(source).toContain("f.organization_id = $1");
+    expect(source).toContain("consumed_at IS NULL AND expires_at > $2");
+    expect(source).toContain("SET consumed_at = $2");
+    expect(source).toContain("status = 'REVOKED'");
+    expect(source).toContain("status !== \"AVAILABLE\"");
+  });
 });

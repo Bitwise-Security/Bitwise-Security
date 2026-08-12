@@ -39,6 +39,8 @@ Browser --TLS--> Cloudflare Worker --> private Container --> internal D1 binding
 | `files` | Tenant/space/uploader/direction, private storage key, wrapped DEK, status, expiry |
 | `upload_sessions`, `upload_parts` | Creator-bound multipart state and confirmed part metadata |
 | `download_tickets` | User-bound, hashed, 60-second, single-use capability |
+| `secure_transfers` | Admin-created, seven-day password-gated delivery; hashed link token and Argon2id password only |
+| `secure_transfer_download_tickets` | Hashed, 60-second, single-use public-download capability after password verification |
 | `audit_events` | Append-only actor/action/target/outcome/IP/user-agent/metadata ledger |
 | `notification_outbox` | Retryable mail without putting secrets or file contents into messages |
 
@@ -51,10 +53,11 @@ or an explicit space membership. Object UUIDs are identifiers, never authorizati
 | --- | --- |
 | Authentication | `/api/v1/auth/login`, `/mfa`, `/logout`, `/me`, invitation, MFA enrolment, password-reset request/confirm |
 | Administration | `/api/v1/admin/clients`, client status/MFA reset, `/api/v1/admin/audit-events` |
-| Spaces | `/api/v1/spaces`, `/api/v1/spaces/:id/files` |
+| Spaces | `/api/v1/spaces`, `/api/v1/spaces/:id/files`, admin creation without a client account |
 | Upload | create under a space, resume state, exact-part URL, confirm part, complete, abort |
 | File management | `PATCH /api/v1/files/:id`, `DELETE /api/v1/files/:id` |
 | Download | create authenticated ticket, then consume it once at `/api/v1/downloads/:ticket` |
+| Password-protected delivery | unlock with separate link token + password, then consume a 60-second single-use ticket |
 
 All state-changing authenticated endpoints require the session cookie, exact trusted
 origin, and synchronizer CSRF token. Zod validates JSON and route parameters. Upload
@@ -71,6 +74,7 @@ chunks pass through narrowly scoped internal R2 binding operations.
 | Cross-site request forgery | Exact Origin checks plus synchronizer token | Global request hook and mutation handlers |
 | IDOR / malicious client | Tenant + space membership predicates on every file/space/upload operation | Authorization SQL and route role checks |
 | Public or replayed download URL | Auth-bound, hashed, signed, 60-second, one-use ticket; attachment-only response | Download route compare-and-set claim |
+| Password-link theft or guessing | 256-bit link token plus separately delivered generated password, keyed token digest, Argon2id password hash, IP throttling, per-transfer lockout, seven-day hard expiry, revocation, and 60-second one-use download tickets | Edge limiter, secure-transfer routes, D1 compare-and-set updates |
 | Object-storage disclosure | AES-256-GCM chunks, random per-file DEK, private R2 binding, versioned envelope encryption | Browser crypto, container/Worker binding |
 | Ciphertext tampering/reordering | Per-chunk GCM tag and AAD containing file ID, part number, and length | Encrypt/decrypt helpers |
 | Dangerous or disguised upload | Extension policy, magic-byte verification, quarantine, ClamAV hook, no inline serving | Create route, worker, download headers |
@@ -108,7 +112,7 @@ and convenient browser downloads and is not claimed here.
 | A01 Broken Access Control | Tenant and membership predicates, creator-bound uploads, role checks, CSRF, one-use auth-bound downloads; automated query/IDOR regression coverage |
 | A02 Cryptographic Failures | TLS/HSTS deployment requirement, AES-256-GCM envelope encryption, Argon2id, random opaque tokens; backup encryption is an operator control |
 | A03 Injection | Parameterized SQL, Zod validation, React output encoding, no shell execution; CSP adds containment |
-| A04 Insecure Design | Explicit trust boundaries, deny-by-default object access, quarantine state machine, threat model, no anonymous sharing |
+| A04 Insecure Design | Explicit trust boundaries, deny-by-default object access, quarantine state machine, threat model; accountless delivery requires two separately shared credentials and never creates a bearer-only public URL |
 | A05 Security Misconfiguration | Production refuses local storage/key, stub scanner, or SMTP; Helmet headers and private bucket guidance; final infrastructure review still required |
 | A06 Vulnerable Components | Exact lockfile and pinned direct dependencies, audit/test gate; ongoing CI/container scanning remains operational work |
 | A07 Identification and Authentication Failures | Argon2id, TOTP/recovery codes, lockout, shared throttling, session rotation/revocation, generic reset/login responses |
@@ -120,6 +124,7 @@ and convenient browser downloads and is not claimed here.
 
 Automated tests cover cryptography/tamper rejection, TOTP replay, filename/path and
 magic-byte policy, request origin/CSRF boundaries, security headers, D1 migrations,
-and authorization query invariants. They do not replace full D1/R2 staging tests,
+secure-transfer credential storage, single-use ticket invariants, and authorization
+query invariants. They do not replace full D1/R2 staging tests,
 real ClamAV/Resend staging tests, infrastructure review, or an
 independent penetration test. Complete those before production authorization.

@@ -10,13 +10,15 @@ export interface RatePolicy {
 
 const AUTH_POLICIES = new Map<string, RatePolicy>([
   ["POST /api/v1/auth/login", { limit: 10, windowSeconds: 60 }],
-  ["POST /api/v1/auth/mfa", { limit: 10, windowSeconds: 300 }],
+  ["POST /api/v1/auth/mfa/verify", { limit: 10, windowSeconds: 300 }],
   ["POST /api/v1/auth/password-reset/request", { limit: 5, windowSeconds: 900 }],
   ["POST /api/v1/auth/password-reset/confirm", { limit: 5, windowSeconds: 900 }],
   ["POST /api/v1/auth/mfa/enrol", { limit: 10, windowSeconds: 600 }],
   ["POST /api/v1/auth/mfa/confirm", { limit: 10, windowSeconds: 600 }],
   ["POST /api/v1/invitations/accept", { limit: 10, windowSeconds: 600 }],
   ["POST /api/v1/admin/clients/invitations", { limit: 20, windowSeconds: 3600 }],
+  ["POST /api/v1/admin/spaces", { limit: 20, windowSeconds: 3600 }],
+  ["POST /api/v1/public/secure-transfers/unlock", { limit: 10, windowSeconds: 300 }],
 ]);
 
 export function ratePolicyFor(method: string, pathname: string): RatePolicy | undefined {

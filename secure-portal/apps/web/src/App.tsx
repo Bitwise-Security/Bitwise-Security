@@ -4,6 +4,7 @@ import { AcceptInvitationPage, EnrolMfaPage } from "./pages/EnrollmentPages";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ForgotPasswordPage, ResetPasswordPage } from "./pages/PasswordPages";
+import { ReceiveTransferPage } from "./pages/ReceiveTransferPage";
 
 export function App() {
   return (
@@ -16,10 +17,10 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
           <Route path="/enrol-mfa" element={<EnrolMfaPage />} />
+          <Route path="/receive" element={<ReceiveTransferPage />} />
           <Route path="*" element={<LoginPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
   );
 }
-

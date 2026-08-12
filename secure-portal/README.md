@@ -27,6 +27,10 @@ OWASP self-review, and residual risks.
   changing the private storage key.
 - Administrators can review authentication, file, and permission activity in the
   audit view.
+- For an occasional recipient, an administrator can create a client/project space
+  without an account and issue a password-protected transfer. The generated link
+  and one-time-shown password must be sent over separate channels. The file remains
+  quarantined until scanning passes, can be revoked, and is deleted after seven days.
 
 ## Local evaluation with Docker Compose
 
@@ -194,6 +198,9 @@ Docker integration verification:
    HSTS, CSP, frame denial, `nosniff`, and `no-store`.
 10. Attempt `UPDATE` or `DELETE` on `audit_events` as the application role; the
     append-only trigger must reject it.
+11. Create a password-protected transfer, verify a wrong password is denied, verify
+    the correct password returns a 60-second ticket, and verify that ticket cannot be
+    reused. Revoke a second link and confirm it remains unavailable.
 
 ## Operations checklist
 

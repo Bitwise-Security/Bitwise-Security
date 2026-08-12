@@ -1,16 +1,15 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
-import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { getConfig } from "../config.js";
 import { getPool } from "../db.js";
 import { AppError } from "../errors.js";
 import { canAccessSpace, findAuthorizedFile } from "../files/authorization.js";
-import { decryptChunk } from "../files/file-crypto.js";
+import { createDecryptedFileStream, setAttachmentHeaders } from "../files/download.js";
 import { getFileKeyProvider } from "../files/key-provider.js";
 import { clientFilePolicy, declaredFileAllowed, sanitizeDisplayName } from "../files/policy.js";
 import { getStorage } from "../files/storage.js";
-import { constantTimeTextEqual, tokenDigest } from "../security/crypto.js";
+import { constantTimeTextEqual, hashPassword, randomToken, tokenDigest } from "../security/crypto.js";
 import { requireAuth, requireCsrf } from "../security/sessions.js";
 import { auditEventQuery, writeAuditEvent } from "../services/audit.js";
 
@@ -19,6 +18,7 @@ const uploadCreateSchema = z.object({
   contentType: z.string().min(1).max(200),
   size: z.number().int().positive(),
   expiresInDays: z.number().int().min(1).max(365).nullable().optional(),
+  deliveryMode: z.enum(["PORTAL", "PASSWORD_LINK"]).default("PORTAL"),
 });
 const idParams = z.object({ id: z.string().uuid() });
 const partParams = z.object({ id: z.string().uuid(), partNumber: z.coerce.number().int().min(1).max(10_000) });
@@ -134,6 +134,9 @@ export function registerFileRoutes(app: FastifyInstance): void {
       if (!(await canAccessSpace(auth, params.data.id))) {
         throw new AppError(404, "Space not found", "NOT_FOUND");
       }
+      if (body.data.deliveryMode === "PASSWORD_LINK" && auth.role !== "ADMIN") {
+        throw new AppError(403, "Only an administrator can create a password-protected link", "PERMISSION_DENIED");
+      }
       if (body.data.size > getConfig().MAX_FILE_SIZE_BYTES) {
         throw new AppError(413, "File exceeds the 2 GB limit", "FILE_TOO_LARGE");
       }
@@ -153,12 +156,23 @@ export function registerFileRoutes(app: FastifyInstance): void {
       const chunkSize = getConfig().UPLOAD_CHUNK_SIZE_BYTES;
       const chunkCount = Math.ceil(body.data.size / chunkSize);
       const generatedKey = await getFileKeyProvider().generate();
+      const transferId = body.data.deliveryMode === "PASSWORD_LINK" ? randomUUID() : null;
+      const transferToken = transferId ? randomToken() : null;
+      const transferPassword = transferId
+        ? randomBytes(12).toString("hex").toUpperCase().match(/.{1,4}/gu)!.join("-")
+        : null;
+      const transferPasswordHash = transferPassword ? await hashPassword(transferPassword) : null;
       const storage = getStorage();
       let storageUploadId: string | null = null;
       try {
         storageUploadId = await storage.createUpload(storageKey);
         const uploadId = randomUUID();
         const now = Date.now();
+        const expiresAt = transferId
+          ? now + 7 * 86_400_000
+          : body.data.expiresInDays == null
+            ? null
+            : now + body.data.expiresInDays * 86_400_000;
         await getPool().batch([
           {
             sql:
@@ -185,7 +199,7 @@ export function registerFileRoutes(app: FastifyInstance): void {
               generatedKey.wrappedKey,
               generatedKey.provider,
               generatedKey.version,
-              body.data.expiresInDays == null ? null : now + body.data.expiresInDays * 86_400_000,
+              expiresAt,
             ],
           },
           {
@@ -194,6 +208,14 @@ export function registerFileRoutes(app: FastifyInstance): void {
                   VALUES ($1, $2, $3, $4, $5)`,
             params: [uploadId, fileId, auth.userId, storageUploadId, now + 86_400_000],
           },
+          ...(transferId && transferToken && transferPasswordHash && expiresAt
+            ? [{
+                sql: `INSERT INTO secure_transfers
+                        (id, file_id, created_by, token_digest, password_hash, expires_at)
+                      VALUES ($1, $2, $3, $4, $5, $6)`,
+                params: [transferId, fileId, auth.userId, tokenDigest(transferToken), transferPasswordHash, expiresAt],
+              }]
+            : []),
           auditEventQuery(request, {
             organizationId: auth.organizationId,
             actorUserId: auth.userId,
@@ -201,7 +223,11 @@ export function registerFileRoutes(app: FastifyInstance): void {
             targetType: "FILE",
             targetId: fileId,
             outcome: "SUCCESS",
-            metadata: { size: body.data.size, direction: auth.role === "ADMIN" ? "ADMIN_TO_CLIENT" : "CLIENT_TO_ADMIN" },
+            metadata: {
+              size: body.data.size,
+              direction: auth.role === "ADMIN" ? "ADMIN_TO_CLIENT" : "CLIENT_TO_ADMIN",
+              deliveryMode: body.data.deliveryMode,
+            },
           }),
         ]);
         const plaintextKey = generatedKey.plaintextKey.toString("base64");
@@ -214,6 +240,14 @@ export function registerFileRoutes(app: FastifyInstance): void {
           noncePrefix: noncePrefix.toString("base64"),
           plaintextKey,
           completedParts: [],
+          secureTransfer: transferId && transferToken && transferPassword && expiresAt
+            ? {
+                id: transferId,
+                url: `${getConfig().PUBLIC_ORIGIN}/receive#token=${encodeURIComponent(transferToken)}`,
+                password: transferPassword,
+                expiresAt: new Date(expiresAt).toISOString(),
+              }
+            : undefined,
         });
       } catch (error) {
         generatedKey.plaintextKey.fill(0);
@@ -295,6 +329,11 @@ export function registerFileRoutes(app: FastifyInstance): void {
       await getPool().batch([
         {
           sql: "UPDATE files SET status = 'DELETED', deleted_at = $2, updated_at = $2 WHERE id = $1",
+          params: [file.id, now],
+        },
+        {
+          sql: `UPDATE secure_transfers SET status = 'REVOKED', revoked_at = $2
+                WHERE file_id = $1 AND status IN ('PENDING_SCAN', 'ACTIVE')`,
           params: [file.id, now],
         },
         auditEventQuery(request, {
@@ -561,44 +600,8 @@ export function registerFileRoutes(app: FastifyInstance): void {
         throw new AppError(404, "Download not found", "NOT_FOUND");
       }
 
-      const storage = getStorage();
-      const keyProvider = getFileKeyProvider();
-      const stream = Readable.from((async function* () {
-        const key = await keyProvider.unwrap(file.wrapped_dek, file.key_version);
-        let absoluteOffset = 0;
-        try {
-          for (let partNumber = 1; partNumber <= file.chunk_count; partNumber += 1) {
-            const lengths = expectedPartLengths(file, partNumber);
-            const encrypted = await storage.readPart(
-              file.storage_key,
-              partNumber,
-              storage.mode === "local" ? 0 : absoluteOffset,
-              lengths.ciphertext,
-            );
-            yield decryptChunk(
-              encrypted,
-              key,
-              file.nonce_prefix,
-              file.id,
-              partNumber,
-              lengths.plaintext,
-            );
-            absoluteOffset += lengths.ciphertext;
-          }
-        } finally {
-          key.fill(0);
-        }
-      })());
-
-      const asciiName = file.display_name.replace(/[^a-zA-Z0-9._ -]/gu, "_").replaceAll('"', "_");
-      reply.header("Content-Type", "application/octet-stream");
-      reply.header("Content-Length", file.plaintext_size);
-      const encodedName = encodeURIComponent(file.display_name).replace(/[!'()*]/gu, (character) =>
-        `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
-      );
-      reply.header("Content-Disposition", `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`);
-      reply.header("Cache-Control", "no-store, private");
-      reply.header("X-Content-Type-Options", "nosniff");
+      const stream = createDecryptedFileStream(file);
+      setAttachmentHeaders(reply, file);
       await writeAuditEvent(request, {
         organizationId: auth.organizationId,
         actorUserId: auth.userId,

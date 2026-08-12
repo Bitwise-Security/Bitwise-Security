@@ -33,5 +33,18 @@ describe("HTTP security boundary", () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toEqual({ error: "Untrusted request origin" });
   });
-});
 
+  it("does not reveal details for a malformed public transfer credential", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/secure-transfers/unlock",
+      headers: { origin: "http://localhost:4100", "content-type": "application/json" },
+      payload: { token: "short", password: "short" },
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      error: "This secure transfer is invalid, locked, or expired",
+      code: "TRANSFER_UNAVAILABLE",
+    });
+  });
+});

@@ -4,6 +4,7 @@ import { nextRateState, ratePolicyFor } from "../src/rate-limit.js";
 describe("Cloudflare edge authentication limiter", () => {
   it("limits only the explicit sensitive endpoints", () => {
     expect(ratePolicyFor("post", "/api/v1/auth/login")).toEqual({ limit: 10, windowSeconds: 60 });
+    expect(ratePolicyFor("post", "/api/v1/public/secure-transfers/unlock")).toEqual({ limit: 10, windowSeconds: 300 });
     expect(ratePolicyFor("GET", "/api/v1/auth/login")).toBeUndefined();
     expect(ratePolicyFor("POST", "/api/v1/files/example/download-ticket")).toBeUndefined();
   });

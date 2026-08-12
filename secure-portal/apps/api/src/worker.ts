@@ -104,6 +104,11 @@ async function scanFile(file: ScanFile): Promise<void> {
                 VALUES ($1, 'FILE_SCAN_REJECTED', 'FILE', $2, 'SUCCESS', $3)`,
           params: [file.organization_id, file.id, JSON.stringify({ reason: rejectionCode })],
         },
+        {
+          sql: `UPDATE secure_transfers SET status = 'REVOKED', revoked_at = $2
+                WHERE file_id = $1 AND status = 'PENDING_SCAN'`,
+          params: [file.id, now],
+        },
       ]);
       await storage.deleteObject(file.storage_key);
       return;
@@ -121,6 +126,11 @@ async function scanFile(file: ScanFile): Promise<void> {
                 (organization_id, action, target_type, target_id, outcome, metadata)
               VALUES ($1, 'FILE_SCAN_PASSED', 'FILE', $2, 'SUCCESS', '{}')`,
         params: [file.organization_id, file.id],
+      },
+      {
+        sql: `UPDATE secure_transfers SET status = 'ACTIVE'
+              WHERE file_id = $1 AND status = 'PENDING_SCAN' AND expires_at > $2`,
+        params: [file.id, now],
       },
     ]);
     const recipients = await getPool().query<{
@@ -238,12 +248,19 @@ async function expireNextFile(): Promise<boolean> {
   );
   if (!claimed.rowCount) return true;
   await getStorage().deleteObject(file.storage_key);
-  await getPool().query(
-    `INSERT INTO audit_events
-       (organization_id, action, target_type, target_id, outcome, metadata)
-     VALUES ($1, 'FILE_EXPIRED', 'FILE', $2, 'SUCCESS', '{"objectDeleted":true}')`,
-    [file.organization_id, file.id],
-  );
+  await getPool().batch([
+    {
+      sql: `UPDATE secure_transfers SET status = 'EXPIRED'
+            WHERE file_id = $1 AND status IN ('PENDING_SCAN', 'ACTIVE')`,
+      params: [file.id],
+    },
+    {
+      sql: `INSERT INTO audit_events
+             (organization_id, action, target_type, target_id, outcome, metadata)
+            VALUES ($1, 'FILE_EXPIRED', 'FILE', $2, 'SUCCESS', '{"objectDeleted":true}')`,
+      params: [file.organization_id, file.id],
+    },
+  ]);
   return true;
 }
 
@@ -274,6 +291,11 @@ async function cleanupNextUpload(): Promise<boolean> {
     {
       sql: "UPDATE files SET status = 'EXPIRED', deleted_at = $2, updated_at = $2 WHERE id = $1",
       params: [upload.file_id, now],
+    },
+    {
+      sql: `UPDATE secure_transfers SET status = 'EXPIRED'
+            WHERE file_id = $1 AND status = 'PENDING_SCAN'`,
+      params: [upload.file_id],
     },
     {
       sql: `INSERT INTO audit_events

@@ -15,6 +15,9 @@ const inviteSchema = z.object({
   displayName: z.string().trim().min(1).max(160),
   spaceName: z.string().trim().min(1).max(160),
 });
+const spaceSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+});
 
 const statusSchema = z.object({ status: z.enum(["ACTIVE", "DISABLED"]) });
 const userIdSchema = z.object({ userId: z.string().uuid() });
@@ -24,6 +27,39 @@ const auditQuerySchema = z.object({
 });
 
 export function registerAdminRoutes(app: FastifyInstance): void {
+  app.post(
+    "/api/v1/admin/spaces",
+    { preHandler: [requireAdmin, requireCsrf] },
+    async (request, reply) => {
+      const parsed = spaceSchema.safeParse(request.body);
+      if (!parsed.success) throw new AppError(400, "Invalid request", "INVALID_REQUEST");
+      const auth = request.auth!;
+      const duplicate = await getPool().query(
+        `SELECT 1 FROM client_spaces
+         WHERE organization_id = $1 AND name = $2 COLLATE NOCASE AND archived_at IS NULL`,
+        [auth.organizationId, parsed.data.name],
+      );
+      if (duplicate.rowCount) throw new AppError(409, "A client space with this name already exists", "SPACE_EXISTS");
+      const id = randomUUID();
+      await getPool().batch([
+        {
+          sql: "INSERT INTO client_spaces (id, organization_id, name) VALUES ($1, $2, $3)",
+          params: [id, auth.organizationId, parsed.data.name],
+        },
+        auditEventQuery(request, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: "CLIENT_SPACE_CREATED",
+          targetType: "CLIENT_SPACE",
+          targetId: id,
+          outcome: "SUCCESS",
+          metadata: { accountRequired: false },
+        }),
+      ]);
+      return reply.code(201).send({ id, name: parsed.data.name });
+    },
+  );
+
   app.get(
     "/api/v1/admin/audit-events",
     { preHandler: requireAdmin },
