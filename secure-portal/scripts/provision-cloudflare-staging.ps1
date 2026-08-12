@@ -49,7 +49,17 @@ if ([string]::IsNullOrWhiteSpace($keyRing.current) -or $null -eq $keyRing.keys) 
   throw "PORTAL_STAGING_FILE_KEY_RING must contain current and keys fields."
 }
 
-& docker info *> $null
+$docker = Get-Command docker.exe -ErrorAction SilentlyContinue
+if ($null -eq $docker) {
+  $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  $env:Path = "$machinePath;$userPath"
+  $docker = Get-Command docker.exe -ErrorAction SilentlyContinue
+}
+if ($null -eq $docker) {
+  throw "Docker is installed but is not available in PATH. Restart PowerShell and Docker Desktop."
+}
+& $docker.Source info *> $null
 if ($LASTEXITCODE -ne 0) {
   throw "Docker is required and must be running before a Cloudflare Container deployment."
 }
