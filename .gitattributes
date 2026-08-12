@@ -1,0 +1,2 @@
+secure-portal/*.sh text eol=lf
+secure-portal/Dockerfile.cloudflare text eol=lf

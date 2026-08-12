@@ -42,3 +42,8 @@ jobs:
       - run: npm run build
       - run: npm audit --omit=dev
       - run: npm run cf:check
+      - name: Build and inspect the Cloudflare container image
+        run: |
+          docker build --file Dockerfile.cloudflare --tag bitwise-secure-portal-ci .
+          docker run --rm --entrypoint /bin/sh bitwise-secure-portal-ci -c \
+            'command -v gosu && command -v freshclam && command -v clamd && command -v clamdscan && test -x /usr/local/bin/portal-entrypoint'
