@@ -125,7 +125,7 @@ export async function buildApp() {
     await reply.code(500).send({ error: "Internal server error", code: "INTERNAL_ERROR" });
   });
 
-  if (config.NODE_ENV === "production") {
+  if (config.NODE_ENV === "production" || config.SERVE_STATIC) {
     const apiDirectory = path.dirname(fileURLToPath(import.meta.url));
     const webRoot = path.resolve(apiDirectory, "../../web/dist");
     await app.register(fastifyStatic, { root: webRoot, wildcard: false });

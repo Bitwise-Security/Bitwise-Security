@@ -6,7 +6,7 @@ Cloudflare Pages website does not build or deploy this directory.
 
 The Cloudflare deployment uses a React/TypeScript client served by a Worker, a
 private Fastify/TypeScript API and maintenance process inside a Cloudflare
-Container, a Durable Object edge limiter, a dedicated R2 binding, TLS PostgreSQL,
+Container, a Durable Object edge limiter, dedicated D1 and R2 bindings,
 ClamAV in the container, and Resend. Fastify preserves explicit schema-oriented
 security controls and streaming support while the edge Worker is the only public
 entry point. The Cloudflare account, Worker, bucket, and hostname scope is recorded
@@ -51,12 +51,13 @@ to run in production.
 
 ## Local development without the application container
 
-Start PostgreSQL, Redis, and Mailpit from Compose, set their hosts to `localhost`,
+Start the local D1-compatible bridge, Redis, and Mailpit from Compose, set their
+hosts to `localhost`,
 then run:
 
 ```powershell
 npm ci
-npm run db:migrate
+$env:D1_BINDING_ORIGIN = "http://127.0.0.1:8788"
 npm run db:seed
 npm run dev --workspace @bitwise-portal/api
 ```
@@ -74,17 +75,16 @@ The Vite URL is <http://localhost:4173>; set `PUBLIC_ORIGIN` to that exact origi
 Staging is deliberately isolated at `portal-test.bitwise-security.nl` and uses only:
 
 - Worker `bitwise-secure-portal-staging`
+- D1 database `bitwise-secure-portal-staging-db`
 - R2 bucket `bitwise-secure-portal-staging-files`
 - the Worker-owned `PortalContainer` and `AuthRateLimiter` Durable Objects
 
 Docker must be running because Wrangler builds the Cloudflare Container locally.
-The database must be a dedicated PostgreSQL database with a publicly trusted TLS
-certificate and `sslmode=verify-full`; Cloudflare does not provide managed
-PostgreSQL. Set the required values as environment variables, never in source:
+Wrangler applies versioned migrations to the exact dedicated D1 database before
+deploying the Worker. Set secrets as environment variables, never in source:
 
 ```powershell
 $env:CLOUDFLARE_API_TOKEN = [Environment]::GetEnvironmentVariable("CLOUDFLARE_API_TOKEN", "User")
-$env:PORTAL_STAGING_DATABASE_URL = "postgresql://...?...&sslmode=verify-full"
 $env:PORTAL_STAGING_MFA_ENCRYPTION_KEY = "<32 random bytes, base64>"
 $env:PORTAL_STAGING_SESSION_PEPPER = "<independent random secret>"
 $env:PORTAL_STAGING_FILE_KEY_RING = '{"current":"v1","keys":{"v1":"<32 random bytes, base64>"}}'
@@ -94,21 +94,21 @@ $env:PORTAL_STAGING_ADMIN_PASSWORD = "<unique 12+ character password>"
 ./scripts/provision-cloudflare-staging.ps1
 ```
 
-Startup runs idempotent migrations and creates the first administrator only when no
-administrator exists. The setup email requires both its one-time token and the
+The deployment applies D1 migrations and startup creates the first administrator
+only when no administrator exists. The setup email requires both its one-time token and the
 separately known password before revealing or confirming the TOTP secret. After MFA
 is active, remove the two bootstrap secrets from the staging Worker.
 
 ## Alternative production configuration
 
-Deploy the API and worker as separate processes from the same pinned image. Run
-`db:migrate:prod` as a one-off release job, never `db:seed:prod`. Required settings:
+Deploy the Worker and Container from the same reviewed release. Apply D1 migrations
+before the Worker deployment and never run the demo seed in production. Required settings:
 
 | Setting | Production value |
 | --- | --- |
 | `NODE_ENV` | `production` |
 | `PUBLIC_ORIGIN` | Exact HTTPS portal origin |
-| `DATABASE_URL` | TLS PostgreSQL connection using a least-privilege application role |
+| `D1_BINDING_ORIGIN` | Internal hostname intercepted by the Worker and backed by the dedicated D1 binding |
 | `RATE_LIMIT_BACKEND` | `memory` only behind the trusted Durable Object edge limiter |
 | `STORAGE_MODE` | `r2-binding` in the Cloudflare Container deployment |
 | `FILE_KEY_PROVIDER` | `cloudflare-secret` with a versioned `FILE_KEY_RING` |
@@ -140,7 +140,8 @@ bodies and credentials are not logged. Mailpit/SMTP is only a local-development 
   credential and reaches the binding only through an internal outbound handler.
 - Apply a bucket lifecycle rule to abort incomplete multipart uploads after one day.
 - Storage credentials must be restricted to this one bucket and prefix. The API
-  issues five-minute, exact-part upload URLs; downloads never use public object URLs.
+  permits only exact authenticated multipart operations; downloads never use public
+  object URLs.
 
 ### Malware scanner
 
@@ -165,7 +166,7 @@ zero knowledge.
 TLS terminates at the Cloudflare Worker and HSTS is returned on every response. The
 Container is reachable only through its Worker binding, which replaces spoofable
 forwarding headers with `CF-Connecting-IP`. Container egress is allowlisted to the
-exact database host, Resend, ClamAV updates, and the internal R2 virtual host. Keep the
+internal D1 and R2 virtual hosts, Resend, and ClamAV updates. Keep the
 portal on a separate hostname from the marketing site to preserve cookie and CSP
 boundaries.
 
@@ -199,7 +200,7 @@ Docker integration verification:
 
 ## Operations checklist
 
-- Encrypted PostgreSQL backups with restore tests; private, authenticated Redis.
+- D1 Time Travel/backup recovery drills and private, authenticated Redis where used.
 - Alerts for lockouts, MFA resets, scanner/update failures, outbox failures, and audit
   write failures.
 - Expiry worker and abandoned-upload cleanup running continuously.

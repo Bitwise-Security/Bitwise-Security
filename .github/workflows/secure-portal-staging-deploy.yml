@@ -19,13 +19,6 @@ jobs:
         working-directory: secure-portal
     env:
       CLOUDFLARE_ACCOUNT_ID: "6931a6facc4105d469f43215d2c3fb23"
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      PORTAL_STAGING_MFA_ENCRYPTION_KEY: ${{ secrets.PORTAL_STAGING_MFA_ENCRYPTION_KEY }}
-      PORTAL_STAGING_SESSION_PEPPER: ${{ secrets.PORTAL_STAGING_SESSION_PEPPER }}
-      PORTAL_STAGING_FILE_KEY_RING: ${{ secrets.PORTAL_STAGING_FILE_KEY_RING }}
-      PORTAL_STAGING_RESEND_API_KEY: ${{ secrets.PORTAL_STAGING_RESEND_API_KEY }}
-      PORTAL_STAGING_ADMIN_EMAIL: ${{ secrets.PORTAL_STAGING_ADMIN_EMAIL }}
-      PORTAL_STAGING_ADMIN_PASSWORD: ${{ secrets.PORTAL_STAGING_ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -35,6 +28,14 @@ jobs:
           cache-dependency-path: secure-portal/package-lock.json
       - name: Validate required secrets
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PORTAL_STAGING_MFA_ENCRYPTION_KEY: ${{ secrets.PORTAL_STAGING_MFA_ENCRYPTION_KEY }}
+          PORTAL_STAGING_SESSION_PEPPER: ${{ secrets.PORTAL_STAGING_SESSION_PEPPER }}
+          PORTAL_STAGING_FILE_KEY_RING: ${{ secrets.PORTAL_STAGING_FILE_KEY_RING }}
+          PORTAL_STAGING_RESEND_API_KEY: ${{ secrets.PORTAL_STAGING_RESEND_API_KEY }}
+          PORTAL_STAGING_ADMIN_EMAIL: ${{ secrets.PORTAL_STAGING_ADMIN_EMAIL }}
+          PORTAL_STAGING_ADMIN_PASSWORD: ${{ secrets.PORTAL_STAGING_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           for name in \
@@ -59,15 +60,31 @@ jobs:
       - name: Build the production container before changing Cloudflare
         run: docker build --file Dockerfile.cloudflare --tag bitwise-secure-portal-staging:${{ github.sha }} .
       - name: Verify the exact dedicated R2 bucket
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler r2 bucket info bitwise-secure-portal-staging-files --config apps/edge/wrangler.staging.jsonc
       - name: Verify the exact dedicated D1 database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler d1 info bitwise-secure-portal-staging-db --config apps/edge/wrangler.staging.jsonc
       - name: Apply D1 migrations to only the portal staging database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run db:migrate:staging
       - name: Create only the unreachable staging Worker shell
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cf:bootstrap:staging
       - name: Store runtime secrets on only the staging Worker
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PORTAL_STAGING_MFA_ENCRYPTION_KEY: ${{ secrets.PORTAL_STAGING_MFA_ENCRYPTION_KEY }}
+          PORTAL_STAGING_SESSION_PEPPER: ${{ secrets.PORTAL_STAGING_SESSION_PEPPER }}
+          PORTAL_STAGING_FILE_KEY_RING: ${{ secrets.PORTAL_STAGING_FILE_KEY_RING }}
+          PORTAL_STAGING_RESEND_API_KEY: ${{ secrets.PORTAL_STAGING_RESEND_API_KEY }}
+          PORTAL_STAGING_ADMIN_EMAIL: ${{ secrets.PORTAL_STAGING_ADMIN_EMAIL }}
+          PORTAL_STAGING_ADMIN_PASSWORD: ${{ secrets.PORTAL_STAGING_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           put_secret() {
@@ -80,6 +97,8 @@ jobs:
           put_secret BOOTSTRAP_ADMIN_EMAIL "$PORTAL_STAGING_ADMIN_EMAIL"
           put_secret BOOTSTRAP_ADMIN_PASSWORD "$PORTAL_STAGING_ADMIN_PASSWORD"
       - name: Deploy only the portal staging Worker and Container
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cf:deploy:staging
       - name: Wait for the private Container to become healthy
         shell: bash
@@ -95,4 +114,25 @@ jobs:
             sleep 15
           done
           echo "Staging health check did not become ready in ten minutes." >&2
+          exit 1
+      - name: Remove temporary administrator bootstrap credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          printf '%s' '{"BOOTSTRAP_ADMIN_EMAIL":null,"BOOTSTRAP_ADMIN_PASSWORD":null}' \
+            | npx wrangler secret bulk --config apps/edge/wrangler.staging.jsonc
+      - name: Verify health after bootstrap-secret removal
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error \
+              --max-time 20 \
+              https://portal-test.bitwise-security.nl/api/v1/health \
+              | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Staging health check failed after bootstrap-secret removal." >&2
           exit 1

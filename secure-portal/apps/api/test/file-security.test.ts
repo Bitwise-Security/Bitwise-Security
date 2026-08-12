@@ -70,10 +70,11 @@ describe("file security", () => {
 
   it("keeps audit events immutable at the database boundary", async () => {
     const migration = await readFile(
-      new URL("../src/migrations/003_audit_hardening.sql", import.meta.url),
+      new URL("../../edge/migrations/0001_initial.sql", import.meta.url),
       "utf8",
     );
-    expect(migration).toContain("BEFORE UPDATE OR DELETE ON audit_events");
-    expect(migration).toContain("RAISE EXCEPTION 'audit_events are append-only'");
+    expect(migration).toContain("audit_events_no_update BEFORE UPDATE ON audit_events");
+    expect(migration).toContain("audit_events_no_delete BEFORE DELETE ON audit_events");
+    expect(migration).toContain("RAISE(ABORT, 'audit_events are append-only')");
   });
 });

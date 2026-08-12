@@ -1,14 +1,19 @@
 services:
-  postgres:
-    image: postgres:17.5-alpine3.22
+  d1:
+    image: node:22.17.0-bookworm-slim
+    command: ["node", "--experimental-sqlite", "/app/dev/d1-bridge.mjs"]
     environment:
-      POSTGRES_DB: portal
-      POSTGRES_USER: portal
-      POSTGRES_PASSWORD: portal_dev_password
+      D1_DB_PATH: /data/portal.sqlite
+      D1_MIGRATIONS_PATH: /migrations
+      PORT: "8788"
     volumes:
-      - portal-postgres:/var/lib/postgresql/data
+      - ./dev/d1-bridge.mjs:/app/dev/d1-bridge.mjs:ro
+      - ./apps/edge/migrations:/migrations:ro
+      - portal-d1:/data
+    ports:
+      - "127.0.0.1:8788:8788"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U portal -d portal"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -39,22 +44,28 @@ services:
     environment:
       NODE_ENV: development
       PUBLIC_ORIGIN: http://localhost:4100
-      DATABASE_URL: postgresql://portal:portal_dev_password@postgres:5432/portal
+      SERVE_STATIC: "true"
+      D1_BINDING_ORIGIN: http://d1:8788
       REDIS_URL: redis://redis:6379
       SMTP_HOST: mailpit
-      SMTP_PORT: 1025
+      SMTP_PORT: "1025"
       SMTP_SECURE: "false"
       EMAIL_PROVIDER: smtp
-    command: ["sh", "-c", "npm run db:migrate:prod --workspace @bitwise-portal/api && npm run db:seed:prod --workspace @bitwise-portal/api && npm run start --workspace @bitwise-portal/api"]
+    command: ["sh", "-c", "npm run db:seed:prod --workspace @bitwise-portal/api && npm run start --workspace @bitwise-portal/api"]
     ports:
       - "127.0.0.1:4100:4100"
     volumes:
       - portal-files:/app/data/private-files
     depends_on:
-      postgres:
+      d1:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   portal-worker:
@@ -65,22 +76,23 @@ services:
       - .env
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://portal:portal_dev_password@postgres:5432/portal
+      D1_BINDING_ORIGIN: http://d1:8788
       REDIS_URL: redis://redis:6379
       STORAGE_MODE: local
       LOCAL_STORAGE_PATH: /app/data/private-files
       SCANNER_MODE: stub
       EMAIL_PROVIDER: smtp
+      SMTP_HOST: mailpit
     command: ["npm", "run", "worker", "--workspace", "@bitwise-portal/api"]
     volumes:
       - portal-files:/app/data/private-files
     depends_on:
-      postgres:
+      d1:
         condition: service_healthy
       portal:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  portal-postgres:
+  portal-d1:
   portal-files:

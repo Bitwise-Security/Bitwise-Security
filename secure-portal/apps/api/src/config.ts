@@ -8,6 +8,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(4100),
   PUBLIC_ORIGIN: z.string().url(),
+  SERVE_STATIC: booleanString.default(false),
   D1_BINDING_ORIGIN: z.string().url().default("http://portal-db.internal"),
   REDIS_URL: z.string().min(1),
   RATE_LIMIT_BACKEND: z.enum(["memory", "redis"]).default("redis"),

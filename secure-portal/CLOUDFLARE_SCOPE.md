@@ -5,6 +5,7 @@ The staging deployment is deliberately restricted to these new resources:
 - Worker: `bitwise-secure-portal-staging`
 - Container: Wrangler-generated container for the `PortalContainer` class in that Worker
 - Durable Objects: `PortalContainer` and `AuthRateLimiter` namespaces belonging to that Worker
+- D1 database: `bitwise-secure-portal-staging-db` (`2751c532-68f9-4ffc-988e-bb7e3afaf935`)
 - R2 bucket: `bitwise-secure-portal-staging-files`
 - Custom hostname: `portal-test.bitwise-security.nl`
 

@@ -8,6 +8,7 @@ $portalRoot = Split-Path -Parent $PSScriptRoot
 $edgeRoot = Join-Path $portalRoot "apps\edge"
 $wrangler = Join-Path $portalRoot "node_modules\.bin\wrangler.cmd"
 $config = Join-Path $edgeRoot "wrangler.staging.jsonc"
+$bootstrapConfig = Join-Path $edgeRoot "wrangler.bootstrap.jsonc"
 $bucketName = "bitwise-secure-portal-staging-files"
 $databaseName = "bitwise-secure-portal-staging-db"
 $workerName = "bitwise-secure-portal-staging"
@@ -59,6 +60,9 @@ try {
   & $wrangler d1 migrations apply $databaseName --remote --config $config
   if ($LASTEXITCODE -ne 0) { throw "Failed to migrate the dedicated staging D1 database." }
 
+  & $wrangler deploy --config $bootstrapConfig
+  if ($LASTEXITCODE -ne 0) { throw "Failed to create the unreachable staging Worker shell." }
+
   $secrets = [ordered]@{
     MFA_ENCRYPTION_KEY = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_MFA_ENCRYPTION_KEY")
     SESSION_PEPPER = [Environment]::GetEnvironmentVariable("PORTAL_STAGING_SESSION_PEPPER")
@@ -75,6 +79,22 @@ try {
 
   & $wrangler deploy --config $config
   if ($LASTEXITCODE -ne 0) { throw "Staging deployment failed." }
+
+  $healthy = $false
+  for ($attempt = 0; $attempt -lt 40; $attempt++) {
+    try {
+      $health = Invoke-RestMethod -Uri "https://portal-test.bitwise-security.nl/api/v1/health" -TimeoutSec 20
+      if ($health.status -eq "ok") { $healthy = $true; break }
+    }
+    catch {}
+    Start-Sleep -Seconds 15
+  }
+  if (-not $healthy) { throw "Staging did not become healthy; bootstrap credentials were not removed." }
+
+  @{ BOOTSTRAP_ADMIN_EMAIL = $null; BOOTSTRAP_ADMIN_PASSWORD = $null } |
+    ConvertTo-Json -Compress |
+    & $wrangler secret bulk --config $config
+  if ($LASTEXITCODE -ne 0) { throw "Failed to remove temporary administrator bootstrap credentials." }
 
   Write-Output "Deployed only $workerName with D1 $databaseName, R2 $bucketName, and portal-test.bitwise-security.nl."
 }

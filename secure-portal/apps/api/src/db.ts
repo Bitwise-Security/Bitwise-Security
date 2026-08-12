@@ -59,6 +59,9 @@ function isEncodedBinary(value: unknown): value is EncodedBinary {
 function decodeRow<T>(row: Record<string, unknown>): T {
   const decoded = Object.fromEntries(Object.entries(row).map(([key, value]) => {
     if (isEncodedBinary(value)) return [key, Buffer.from(value.__portalBinary, "base64")];
+    if ((key === "locked" || key === "uploaded_by_me") && typeof value === "number") {
+      return [key, value === 1];
+    }
     if ((key.endsWith("_at") || key === "locked_until") && typeof value === "number") {
       return [key, new Date(value)];
     }
@@ -116,6 +119,7 @@ export function getPool(): D1BindingClient {
   return database;
 }
 
-export async function closePool(): Promise<void> {
+export function closePool(): Promise<void> {
   database = undefined;
+  return Promise.resolve();
 }
