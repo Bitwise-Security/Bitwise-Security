@@ -2,11 +2,13 @@ import Link from "next/link";
 import { CyberBackground } from "@/components/common";
 import ProductGallery from "@/components/reporter/ReporterGallery";
 import portalData from "@/data/secure-portal.json";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: portalData.seo.title,
+export const metadata = createPageMetadata({
+  title: "Secure File Transfer for Pentest Clients",
   description: portalData.seo.description,
-};
+  path: "/secure-portal",
+});
 
 export default function SecurePortalPage() {
   return (

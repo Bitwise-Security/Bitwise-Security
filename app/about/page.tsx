@@ -39,7 +39,7 @@ export default function About() {
                     </svg> */}
                     <Image
                       src="/profile.jpg"
-                      alt="Profile"
+                      alt="Bitwise Security penetration testing specialist"
                       width={400}
                       height={400}
                       className="w-full h-full object-cover rounded-xl"

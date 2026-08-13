@@ -119,6 +119,26 @@
         "ideal": "IoT product companies, smart device manufacturers, industrial control system operators, and hardware startups pre-launch.",
         "frameworks": ["OWASP IoT Top 10", "IEC 62443", "ETSI EN 303 645"]
       }
+    },
+    {
+      "id": "website-development",
+      "icon": "💻",
+      "title": "Secure Website Development",
+      "description": "Professional, responsive websites built around clear customer journeys, strong performance, technical SEO, accessibility, and secure deployment from the start.",
+      "color": "cyber-blue",
+      "keyFocus": ["Responsive design", "Technical SEO", "Secure deployment", "Accessibility"],
+      "fullDetails": {
+        "overview": "I design and build professional websites that make it easy for visitors to understand your organisation and take the next step. Security, performance, accessibility, analytics, and search-engine fundamentals are considered during development instead of being bolted on afterwards.",
+        "whatYouGet": [
+          "A responsive, client-facing design tailored to your organisation",
+          "Clear calls to action and conversion-focused customer journeys",
+          "Technical SEO foundations, metadata, sitemap, and structured content",
+          "Secure hosting and deployment configuration",
+          "Performance, accessibility, and cross-device checks"
+        ],
+        "ideal": "Consultants, sports clubs, event organisers, and small organisations that need a credible website they can confidently send customers to.",
+        "frameworks": ["Google Search Essentials", "WCAG", "OWASP Secure Coding Practices"]
+      }
     }
   ],
   "methodology": [

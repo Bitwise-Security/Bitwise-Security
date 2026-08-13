@@ -11,9 +11,13 @@ type Screenshot = {
 
 type ReporterGalleryProps = {
   items: Screenshot[];
+  productOnly?: boolean;
 };
 
-export default function ReporterGallery({ items }: ReporterGalleryProps) {
+export default function ReporterGallery({
+  items,
+  productOnly = false,
+}: ReporterGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export default function ReporterGallery({ items }: ReporterGalleryProps) {
         {items.map((item, index) => (
           <div
             key={item.src}
-            className={`overflow-hidden rounded-3xl border border-cyber-blue/20 bg-gradient-to-b from-cyber-darkBlue/90 to-cyber-dark/95 text-left box-glow ${
+            className={`group overflow-hidden rounded-3xl border border-cyber-blue/20 bg-gradient-to-b from-cyber-darkBlue/90 to-cyber-dark/95 text-left box-glow ${
               index === 0 ? "md:col-span-2 lg:col-span-1" : ""
             }`}
           >
@@ -63,13 +67,23 @@ export default function ReporterGallery({ items }: ReporterGalleryProps) {
               </div>
             </div>
 
-            <div className="relative aspect-[16/11] bg-[#060915]">
-              <div className="absolute inset-4 rounded-2xl overflow-hidden border border-cyber-blue/20 bg-cyber-dark">
+            <div
+              className={`relative bg-[#060915] ${productOnly ? "aspect-video" : "aspect-[16/11]"}`}
+            >
+              <div
+                className={`absolute overflow-hidden border-cyber-blue/20 bg-cyber-dark ${
+                  productOnly
+                    ? "inset-0 border-y"
+                    : "inset-4 rounded-2xl border"
+                }`}
+              >
                 <Image
                   src={item.src}
                   alt={item.alt}
                   fill
-                  className="object-contain transition-transform duration-500 hover:scale-[1.02]"
+                  className={`transition-transform duration-500 group-hover:scale-[1.02] ${
+                    productOnly ? "object-cover" : "object-contain"
+                  }`}
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>

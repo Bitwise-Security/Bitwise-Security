@@ -3,6 +3,13 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { GoogleTagConsent, Navigation } from "@/components/common";
+import StructuredData from "@/components/common/StructuredData";
+import {
+  DEFAULT_DESCRIPTION,
+  organizationStructuredData,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 // PERF FIX: Orbitron & Rajdhani loaded via next/font instead of @import inside CSS.
 // CSS @import blocks rendering; next/font preloads fonts with zero render-blocking.
@@ -25,9 +32,44 @@ const rajdhani = Rajdhani({
 });
 
 export const metadata: Metadata = {
-  title: "Bitwise Security - Professional Penetration Testing",
-  description:
-    "Expert cybersecurity services including web application pentesting, Active Directory security, Azure audits, and more.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Penetration Testing Netherlands | Bitwise Security",
+    template: "%s | Bitwise Security",
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "Cybersecurity",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_NL",
+    url: "/",
+    siteName: SITE_NAME,
+    title: "Penetration Testing Netherlands | Bitwise Security",
+    description: DEFAULT_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: "Penetration Testing Netherlands | Bitwise Security",
+    description: DEFAULT_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
@@ -80,6 +122,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
+        <StructuredData data={organizationStructuredData} />
         <Navigation />
         {children}
         <GoogleTagConsent />

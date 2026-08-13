@@ -61,7 +61,7 @@ export default function ThreatStream() {
               textShadow: "0 0 10px rgba(255,60,30,.6)",
             }}
           >
-            LIVE THREAT STREAM
+            SIMULATED ATTACK FEED
           </span>
         </div>
         <div

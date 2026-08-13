@@ -1,3 +1,4 @@
+import Link from "next/link";
 import servicesData from "@/data/services.json";
 
 const services = servicesData.services;
@@ -72,6 +73,13 @@ export default function ServiceCard({ service, onLearnMore }: ServiceCardProps) 
           →
         </span>
       </button>
+      <Link
+        href={`/services/${service.id}`}
+        className="mt-4 inline-flex text-xs font-mono tracking-wider text-gray-400 underline decoration-cyber-blue/30 underline-offset-4 transition-colors hover:text-white"
+        aria-label={`Read the full ${service.title} service page`}
+      >
+        FULL SERVICE DETAILS
+      </Link>
     </div>
   );
 }

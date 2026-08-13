@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CyberBackground } from "@/components/common";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Privacy & Cookie Policy | Bitwise Security",
+export const metadata: Metadata = createPageMetadata({
+  title: "Privacy & Cookie Policy",
   description:
     "How Bitwise Security handles contact details, website analytics, cookies, and privacy rights.",
-};
+  path: "/privacy",
+});
 
 const Section = ({
   title,

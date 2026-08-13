@@ -42,7 +42,7 @@ export default function Navigation() {
             <div className="relative">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg transform group-hover:rotate-6 transition-transform duration-300 box-glow overflow-hidden">
                 <Image
-                  src="/logo.png"
+                  src="/logo-nav.webp"
                   alt="Bitwise Security"
                   width={48}
                   height={48}
@@ -77,6 +77,9 @@ export default function Navigation() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
             className="md:hidden p-2 rounded-lg border border-cyber-blue/30 hover:border-cyber-blue hover:bg-cyber-blue/10 transition-all duration-300"
           >
             <svg
@@ -106,7 +109,7 @@ export default function Navigation() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-2 space-y-2 border-t border-cyber-blue/20 pt-4">
+          <div id="mobile-navigation" className="md:hidden mt-4 pb-2 space-y-2 border-t border-cyber-blue/20 pt-4">
             {navLinks.map((link) => (
               <Link
                 key={link.path}

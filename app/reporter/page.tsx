@@ -2,11 +2,13 @@ import Link from "next/link";
 import { CyberBackground } from "@/components/common";
 import reporterData from "@/data/reporter.json";
 import ReporterGallery from "@/components/reporter/ReporterGallery";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: reporterData.seo.title,
+export const metadata = createPageMetadata({
+  title: "Pentest Reporting & Client Portal",
   description: reporterData.seo.description,
-};
+  path: "/reporter",
+});
 
 export default function ReporterPage() {
   return (
@@ -169,7 +171,7 @@ export default function ReporterPage() {
             </p>
           </div>
 
-          <ReporterGallery items={reporterData.gallery.items} />
+          <ReporterGallery items={reporterData.gallery.items} productOnly />
         </section>
 
         <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8">
