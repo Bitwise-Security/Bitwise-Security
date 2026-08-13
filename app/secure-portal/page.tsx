@@ -1,16 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import { CyberBackground } from "@/components/common";
 import ProductGallery from "@/components/reporter/ReporterGallery";
-import portalData from "@/data/secure-portal.json";
-import { createPageMetadata } from "@/lib/seo";
-
-export const metadata = createPageMetadata({
-  title: "Secure File Transfer for Pentest Clients",
-  description: portalData.seo.description,
-  path: "/secure-portal",
-});
+import portalDataEn from "@/data/secure-portal.json";
+import portalDataNl from "@/data/secure-portal.nl.json";
+import { useLocale } from "@/lib/use-locale";
+import { localizedPath } from "@/lib/i18n";
 
 export default function SecurePortalPage() {
+  const locale = useLocale();
+  const portalData = locale === "nl" ? portalDataNl : portalDataEn;
+  const labels = locale === "nl"
+    ? {
+        how: "Bekijk hoe het werkt",
+        private: "STANDAARD PRIVÉ",
+        anonymous: "Geen anonieme bestandsdeling",
+        access: "Toegang wordt expliciet verleend. Alleen een bestands-ID kennen is nooit voldoende om klantgegevens op te halen.",
+        lifecycle: "VAN UPLOAD TOT VERWIJDERING",
+        security: "BEVEILIGINGSMODEL",
+        control: "MAATREGEL",
+        views: "OPGESCHOONDE PRODUCTBEELDEN",
+        retention: "BEWAARTERMIJN EN AVG",
+        start: "VEILIG BEGINNEN",
+      }
+    : {
+        how: "See how it works",
+        private: "PRIVATE BY DEFAULT",
+        anonymous: "No anonymous file sharing",
+        access: "Access is explicitly granted. Knowing a file identifier is never enough to retrieve a customer's data.",
+        lifecycle: "FROM UPLOAD TO DELETION",
+        security: "SECURITY MODEL",
+        control: "CONTROL",
+        views: "SANITIZED PRODUCT VIEWS",
+        retention: "RETENTION & GDPR",
+        start: "START SECURELY",
+      };
   return (
     <main className="relative min-h-screen overflow-hidden pb-20 pt-24">
       <CyberBackground />
@@ -31,7 +56,7 @@ export default function SecurePortalPage() {
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/contact"
+                href={localizedPath("/contact", locale)}
                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyber-blue to-cyan-500 px-6 py-3 font-semibold text-cyber-dark transition-transform duration-300 hover:scale-105"
               >
                 {portalData.delivery.primaryCta}
@@ -40,7 +65,7 @@ export default function SecurePortalPage() {
                 href="#how-it-works"
                 className="inline-flex items-center justify-center rounded-xl border border-cyber-orange/40 bg-cyber-dark/60 px-6 py-3 font-semibold text-white transition-colors hover:border-cyber-orange hover:text-cyber-orange"
               >
-                See how it works
+                {labels.how}
               </a>
             </div>
           </div>
@@ -50,8 +75,8 @@ export default function SecurePortalPage() {
             <div className="relative">
               <div className="mb-6 flex items-center justify-between border-b border-cyber-blue/15 pb-5">
                 <div>
-                  <p className="font-mono text-xs tracking-[0.28em] text-cyber-blue">PRIVATE BY DEFAULT</p>
-                  <h2 className="mt-2 text-2xl font-bold text-white">No anonymous file sharing</h2>
+                  <p className="font-mono text-xs tracking-[0.28em] text-cyber-blue">{labels.private}</p>
+                  <h2 className="mt-2 text-2xl font-bold text-white">{labels.anonymous}</h2>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyber-blue/30 bg-cyber-blue/10 font-bold text-cyber-blue">B</div>
               </div>
@@ -64,7 +89,7 @@ export default function SecurePortalPage() {
                 ))}
               </div>
               <p className="mt-6 text-sm leading-relaxed text-gray-400">
-                Access is explicitly granted. Knowing a file identifier is never enough to retrieve a customer&apos;s data.
+                {labels.access}
               </p>
             </div>
           </div>
@@ -82,7 +107,7 @@ export default function SecurePortalPage() {
 
         <section id="how-it-works" className="mb-20 scroll-mt-28">
           <div className="mb-8 max-w-3xl">
-            <p className="mb-2 font-mono text-xs tracking-[0.35em] text-cyber-orange">FROM UPLOAD TO DELETION</p>
+            <p className="mb-2 font-mono text-xs tracking-[0.35em] text-cyber-orange">{labels.lifecycle}</p>
             <h2 className="text-3xl font-bold text-white md:text-4xl">{portalData.capabilities.title}</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -98,7 +123,7 @@ export default function SecurePortalPage() {
 
         <section className="mb-20 grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
           <div className="rounded-3xl border border-cyber-blue/30 bg-cyber-darkBlue/85 p-8 backdrop-blur-md box-glow">
-            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-blue">SECURITY MODEL</p>
+            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-blue">{labels.security}</p>
             <h2 className="mb-4 text-3xl font-bold text-white">{portalData.security.title}</h2>
             <p className="text-lg leading-relaxed text-gray-300">{portalData.security.text}</p>
           </div>
@@ -107,7 +132,7 @@ export default function SecurePortalPage() {
               <div key={item} className="flex min-h-24 items-start gap-3 rounded-2xl border border-cyber-orange/20 bg-cyber-darkBlue/75 p-4">
                 <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-cyber-orange shadow-[0_0_14px_rgba(255,107,53,.75)]" />
                 <div>
-                  <span className="font-mono text-[10px] tracking-[0.24em] text-cyber-orange">CONTROL 0{index + 1}</span>
+                  <span className="font-mono text-[10px] tracking-[0.24em] text-cyber-orange">{labels.control} 0{index + 1}</span>
                   <p className="mt-2 text-sm font-medium leading-relaxed text-gray-200">{item}</p>
                 </div>
               </div>
@@ -118,7 +143,7 @@ export default function SecurePortalPage() {
         <section className="mb-20">
           <div className="mb-7 flex items-end justify-between gap-6">
             <div>
-              <p className="mb-2 font-mono text-xs tracking-[0.35em] text-cyber-orange">SANITIZED PRODUCT VIEWS</p>
+              <p className="mb-2 font-mono text-xs tracking-[0.35em] text-cyber-orange">{labels.views}</p>
               <h2 className="text-3xl font-bold text-white">{portalData.gallery.title}</h2>
             </div>
             <p className="hidden max-w-xl text-right text-sm text-gray-400 md:block">{portalData.gallery.subtitle}</p>
@@ -128,19 +153,19 @@ export default function SecurePortalPage() {
 
         <section className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-3xl border border-cyber-blue/30 bg-cyber-darkBlue/85 p-8 backdrop-blur-md box-glow">
-            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-blue">RETENTION & GDPR</p>
+            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-blue">{labels.retention}</p>
             <h2 className="mb-4 text-3xl font-bold text-white">{portalData.retention.title}</h2>
             <p className="text-lg leading-relaxed text-gray-300">{portalData.retention.text}</p>
           </div>
           <div className="rounded-3xl border border-cyber-orange/30 bg-cyber-darkBlue/85 p-8 backdrop-blur-md box-glow-orange">
-            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-orange">START SECURELY</p>
+            <p className="mb-3 font-mono text-xs tracking-[0.35em] text-cyber-orange">{labels.start}</p>
             <h2 className="mb-4 text-3xl font-bold text-white">{portalData.delivery.title}</h2>
             <p className="mb-7 leading-relaxed text-gray-300">{portalData.delivery.text}</p>
             <div className="flex flex-col gap-4 sm:flex-row">
-              <Link href="/contact" className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyber-blue to-cyan-500 px-6 py-3 font-semibold text-cyber-dark transition-transform duration-300 hover:scale-105">
+              <Link href={localizedPath("/contact", locale)} className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyber-blue to-cyan-500 px-6 py-3 font-semibold text-cyber-dark transition-transform duration-300 hover:scale-105">
                 {portalData.delivery.primaryCta}
               </Link>
-              <Link href="/services" className="inline-flex items-center justify-center rounded-xl border border-cyber-orange/40 bg-cyber-dark/50 px-6 py-3 font-semibold text-white transition-colors hover:border-cyber-orange hover:text-cyber-orange">
+              <Link href={localizedPath("/services", locale)} className="inline-flex items-center justify-center rounded-xl border border-cyber-orange/40 bg-cyber-dark/50 px-6 py-3 font-semibold text-white transition-colors hover:border-cyber-orange hover:text-cyber-orange">
                 {portalData.delivery.secondaryCta}
               </Link>
             </div>

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { GoogleTagConsent, Navigation } from "@/components/common";
 import StructuredData from "@/components/common/StructuredData";
+import DocumentLanguage from "@/components/common/DocumentLanguage";
 import {
   DEFAULT_DESCRIPTION,
   organizationStructuredData,
@@ -45,6 +46,11 @@ export const metadata: Metadata = {
   category: "Cybersecurity",
   alternates: {
     canonical: "/",
+    languages: {
+      en: "/",
+      nl: "/nl",
+      "x-default": "/",
+    },
   },
   robots: {
     index: true,
@@ -60,6 +66,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_NL",
+    alternateLocale: ["nl_NL"],
     url: "/",
     siteName: SITE_NAME,
     title: "Penetration Testing Netherlands | Bitwise Security",
@@ -80,6 +87,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${orbitron.variable} ${rajdhani.variable}`}>
       <head>
+        <script
+          id="document-language"
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.lang = location.pathname === '/nl' || location.pathname.indexOf('/nl/') === 0 ? 'nl' : 'en';`,
+          }}
+        />
         <script
           id="google-consent-default"
           dangerouslySetInnerHTML={{
@@ -122,6 +135,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
+        <DocumentLanguage />
         <StructuredData data={organizationStructuredData} />
         <Navigation />
         {children}

@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import servicesData from "@/data/services.json";
+import { useLocale } from "@/lib/use-locale";
+import { localizedPath } from "@/lib/i18n";
 
 const services = servicesData.services;
 
@@ -9,6 +13,8 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({ service, onLearnMore }: ServiceCardProps) {
+  const locale = useLocale();
+
   return (
     <div
       className={`bg-cyber-darkBlue/80 backdrop-blur-md border ${
@@ -67,18 +73,22 @@ export default function ServiceCard({ service, onLearnMore }: ServiceCardProps) 
           } animate-pulse`}
         />
         <span className="group-hover/btn:tracking-widest transition-all duration-300">
-          LEARN MORE
+          {locale === "nl" ? "MEER INFORMATIE" : "LEARN MORE"}
         </span>
         <span className="transform group-hover/btn:translate-x-1 transition-transform duration-300">
           →
         </span>
       </button>
       <Link
-        href={`/services/${service.id}`}
+        href={localizedPath(`/services/${service.id}`, locale)}
         className="mt-4 inline-flex text-xs font-mono tracking-wider text-gray-400 underline decoration-cyber-blue/30 underline-offset-4 transition-colors hover:text-white"
-        aria-label={`Read the full ${service.title} service page`}
+        aria-label={
+          locale === "nl"
+            ? `Lees de volledige dienstenpagina over ${service.title}`
+            : `Read the full ${service.title} service page`
+        }
       >
-        FULL SERVICE DETAILS
+        {locale === "nl" ? "VOLLEDIGE DIENSTINFORMATIE" : "FULL SERVICE DETAILS"}
       </Link>
     </div>
   );

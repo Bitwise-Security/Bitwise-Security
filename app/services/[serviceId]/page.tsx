@@ -5,8 +5,12 @@ import { notFound } from "next/navigation";
 import { CyberBackground } from "@/components/common";
 import StructuredData from "@/components/common/StructuredData";
 import contactData from "@/data/contact.json";
+import contactDataNl from "@/data/contact.nl.json";
 import servicesData from "@/data/services.json";
+import servicesDataNl from "@/data/services.nl.json";
 import { createPageMetadata, SITE_URL } from "@/lib/seo";
+import type { Locale } from "@/lib/i18n";
+import { localizedPath } from "@/lib/i18n";
 
 const services = servicesData.services;
 const serviceSeo: Record<string, { title: string; description: string }> = {
@@ -81,19 +85,68 @@ export function generateMetadata({ params }: ServicePageProps): Metadata {
 }
 
 export default function ServiceDetailPage({ params }: ServicePageProps) {
-  const service = services.find((item) => item.id === params.serviceId);
+  return <ServiceDetailContent params={params} locale="en" />;
+}
+
+function ServiceDetailContent({
+  params,
+  locale,
+}: ServicePageProps & { locale: Locale }) {
+  const localizedServices =
+    locale === "nl" ? servicesDataNl.services : servicesData.services;
+  const localizedContactData = locale === "nl" ? contactDataNl : contactData;
+  const service = localizedServices.find((item) => item.id === params.serviceId);
 
   if (!service) notFound();
+
+  const labels = locale === "nl"
+    ? {
+        home: "Home",
+        services: "Diensten",
+        delivery: "VEILIGE DIGITALE OPLEVERING",
+        assessment: "PRAKTISCH BEVEILIGINGSONDERZOEK",
+        discuss: "Bespreek deze dienst",
+        reporting: "Bekijk rapportage en oplevering",
+        deliverables: "OPLEVERING",
+        receive: "Wat u ontvangt",
+        fit: "GESCHIKT VOOR",
+        forWho: "Voor wie dit bedoeld is",
+        frameworks: "Kaders en standaarden",
+        selected: "GESELECTEERD LIVEWERK",
+        websites: "Websites die al voor echte organisaties werken",
+        projects: "Deze liveprojecten laten zien hoe evenementinformatie, clubidentiteit en klantconversie ieder tot een ander ontwerp leiden.",
+        visit: "Bekijk liveproject ↗",
+        related: "Bekijk gerelateerde diensten",
+      }
+    : {
+        home: "Home",
+        services: "Services",
+        delivery: "SECURE DIGITAL DELIVERY",
+        assessment: "HANDS-ON SECURITY ASSESSMENT",
+        discuss: "Discuss this service",
+        reporting: "See reporting and delivery",
+        deliverables: "DELIVERABLES",
+        receive: "What you receive",
+        fit: "BEST FIT",
+        forWho: "Who this is for",
+        frameworks: "Frameworks and standards",
+        selected: "SELECTED LIVE WORK",
+        websites: "Websites already working for real organisations",
+        projects: "These live projects show how event information, club identity, and customer conversion can each lead to a different design.",
+        visit: "Visit live project ↗",
+        related: "Explore related services",
+      };
 
   const isBlue = service.color === "cyber-blue";
   const accentText = isBlue ? "text-cyber-blue" : "text-cyber-orange";
   const accentBorder = isBlue
     ? "border-cyber-blue/30"
     : "border-cyber-orange/30";
-  const relatedServices = services
+  const relatedServices = localizedServices
     .filter((item) => item.id !== service.id)
     .slice(0, 3);
-  const pageUrl = `${SITE_URL}/services/${service.id}`;
+  const localizedServicePath = localizedPath(`/services/${service.id}`, locale);
+  const pageUrl = `${SITE_URL}${localizedServicePath}`;
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -110,12 +163,12 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
       {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+          { "@type": "ListItem", position: 1, name: labels.home, item: `${SITE_URL}${localizedPath("/", locale)}` },
           {
             "@type": "ListItem",
             position: 2,
-            name: "Services",
-            item: `${SITE_URL}/services`,
+            name: labels.services,
+            item: `${SITE_URL}${localizedPath("/services", locale)}`,
           },
           {
             "@type": "ListItem",
@@ -138,15 +191,15 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
           aria-label="Breadcrumb"
           className="mb-8 flex flex-wrap items-center gap-2 font-mono text-xs text-gray-400"
         >
-          <Link href="/" className="transition-colors hover:text-cyber-blue">
-            Home
+          <Link href={localizedPath("/", locale)} className="transition-colors hover:text-cyber-blue">
+            {labels.home}
           </Link>
           <span aria-hidden="true">/</span>
           <Link
-            href="/services"
+            href={localizedPath("/services", locale)}
             className="transition-colors hover:text-cyber-blue"
           >
-            Services
+            {labels.services}
           </Link>
           <span aria-hidden="true">/</span>
           <span className={accentText}>{service.title}</span>
@@ -161,8 +214,8 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
             </span>
             <p className={`font-mono text-xs tracking-[0.3em] ${accentText}`}>
               {service.id === "website-development"
-                ? "SECURE DIGITAL DELIVERY"
-                : "HANDS-ON SECURITY ASSESSMENT"}
+                ? labels.delivery
+                : labels.assessment}
             </p>
           </div>
           <h1 className="max-w-4xl text-4xl font-bold leading-tight text-white md:text-6xl">
@@ -183,16 +236,16 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
           </div>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/contact"
+              href={localizedPath("/contact", locale)}
               className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyber-blue to-cyan-500 px-6 py-3 font-semibold text-cyber-dark transition-transform hover:scale-105"
             >
-              Discuss this service
+              {labels.discuss}
             </Link>
             <Link
-              href="/reporter"
+              href={localizedPath("/reporter", locale)}
               className="inline-flex items-center justify-center rounded-xl border border-cyber-orange/40 bg-cyber-dark/55 px-6 py-3 font-semibold text-white transition-colors hover:border-cyber-orange hover:text-cyber-orange"
             >
-              See reporting and delivery
+              {labels.reporting}
             </Link>
           </div>
         </header>
@@ -200,10 +253,10 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
         <section className="mb-12 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <article className="rounded-3xl border border-cyber-blue/25 bg-cyber-darkBlue/80 p-8">
             <p className="mb-3 font-mono text-xs tracking-[0.3em] text-cyber-blue">
-              DELIVERABLES
+              {labels.deliverables}
             </p>
             <h2 className="mb-6 text-3xl font-bold text-white">
-              What you receive
+              {labels.receive}
             </h2>
             <ul className="space-y-4">
               {service.fullDetails.whatYouGet.map((item) => (
@@ -218,10 +271,10 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
           <aside className="space-y-6">
             <div className="rounded-3xl border border-cyber-orange/25 bg-cyber-darkBlue/80 p-8">
               <p className="mb-3 font-mono text-xs tracking-[0.3em] text-cyber-orange">
-                BEST FIT
+                {labels.fit}
               </p>
               <h2 className="mb-4 text-2xl font-bold text-white">
-                Who this is for
+                {labels.forWho}
               </h2>
               <p className="leading-relaxed text-gray-300">
                 {service.fullDetails.ideal}
@@ -230,7 +283,7 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
 
             <div className="rounded-3xl border border-cyber-blue/25 bg-cyber-darkBlue/80 p-8">
               <h2 className="mb-4 text-2xl font-bold text-white">
-                Frameworks and standards
+                {labels.frameworks}
               </h2>
               <div className="flex flex-wrap gap-2">
                 {service.fullDetails.frameworks.map((framework) => (
@@ -250,18 +303,17 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
           <section className="mb-12">
             <div className="mb-7 max-w-3xl">
               <p className="mb-3 font-mono text-xs tracking-[0.3em] text-cyber-blue">
-                SELECTED LIVE WORK
+                {labels.selected}
               </p>
               <h2 className="text-3xl font-bold text-white">
-                Websites already working for real organisations
+                {labels.websites}
               </h2>
               <p className="mt-4 leading-relaxed text-gray-300">
-                These live projects show how event information, club identity,
-                and customer conversion can each lead to a different design.
+                {labels.projects}
               </p>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {contactData.websiteProjects.items.map((project) => (
+              {localizedContactData.websiteProjects.items.map((project) => (
                 <a
                   key={project.url}
                   href={project.url}
@@ -289,7 +341,7 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
                       {project.description}
                     </p>
                     <span className="mt-4 inline-flex text-sm font-semibold text-cyber-blue">
-                      Visit live project ↗
+                      {labels.visit}
                     </span>
                   </div>
                 </a>
@@ -300,13 +352,13 @@ export default function ServiceDetailPage({ params }: ServicePageProps) {
 
         <section className="rounded-3xl border border-cyber-blue/20 bg-gradient-to-br from-cyber-darkBlue/85 to-cyber-dark/90 p-8">
           <h2 className="mb-6 text-2xl font-bold text-white">
-            Explore related services
+            {labels.related}
           </h2>
           <div className="grid gap-4 md:grid-cols-3">
             {relatedServices.map((relatedService) => (
               <Link
                 key={relatedService.id}
-                href={`/services/${relatedService.id}`}
+                href={localizedPath(`/services/${relatedService.id}`, locale)}
                 className="rounded-2xl border border-cyber-blue/20 bg-cyber-dark/55 p-5 transition-colors hover:border-cyber-blue/60"
               >
                 <span className="text-2xl" aria-hidden="true">

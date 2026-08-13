@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import homepageData from "@/data/homepage.json";
+import homepageDataNl from "@/data/homepage.nl.json";
+import { useLocale } from "@/lib/use-locale";
 
 // PERF FIX: Interval was 45ms = ~22 React re-renders/second just for this component.
 // Changed to 150ms (still smooth animation, ~6.7x/sec instead of 22x/sec)
@@ -9,11 +11,22 @@ import homepageData from "@/data/homepage.json";
 // so the interval clears itself once all values reach target (no pointless ticking forever)
 
 export default function StatsCards() {
+  const locale = useLocale();
+  const statsData = locale === "nl" ? homepageDataNl.stats : homepageData.stats;
   const [stats, setStats] = useState(
-    homepageData.stats.map((stat) => ({ ...stat, value: 0 })),
+    statsData.map((stat) => ({ ...stat, value: 0 })),
   );
 
   useEffect(() => {
+    const nextStatsData =
+      locale === "nl" ? homepageDataNl.stats : homepageData.stats;
+    setStats(nextStatsData.map((stat) => ({ ...stat, value: 0 })));
+  }, [locale]);
+
+  useEffect(() => {
+    const nextStatsData =
+      locale === "nl" ? homepageDataNl.stats : homepageData.stats;
+    setStats(nextStatsData.map((stat) => ({ ...stat, value: 0 })));
     const iv = setInterval(() => {
       setStats((p) => {
         const next = p.map((s) => ({
@@ -28,7 +41,7 @@ export default function StatsCards() {
       });
     }, 150); // was 45ms — reduced by 70%
     return () => clearInterval(iv);
-  }, []);
+  }, [locale]);
 
   return (
     <div

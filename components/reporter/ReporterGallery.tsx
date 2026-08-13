@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/use-locale";
 
 type Screenshot = {
   src: string;
@@ -18,6 +19,20 @@ export default function ReporterGallery({
   items,
   productOnly = false,
 }: ReporterGalleryProps) {
+  const locale = useLocale();
+  const copy = locale === "nl"
+    ? {
+        closer: "Open het voorbeeld voor meer detail",
+        full: "Open de volledige afbeelding",
+        preview: "Voorbeeld",
+        close: "Afbeeldingsvoorbeeld sluiten",
+      }
+    : {
+        closer: "Open the preview for a closer look",
+        full: "Open the full image preview",
+        preview: "Preview",
+        close: "Close screenshot preview",
+      };
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -62,7 +77,7 @@ export default function ReporterGallery({
                   {item.title}
                 </h3>
                 <p className="mt-1 text-sm text-gray-400">
-                  Open the preview for a closer look
+                  {copy.closer}
                 </p>
               </div>
             </div>
@@ -91,14 +106,14 @@ export default function ReporterGallery({
 
             <div className="flex items-center justify-between gap-3 border-t border-cyber-blue/10 px-5 py-4">
               <span className="text-sm text-gray-300">
-                Open the full image preview
+                {copy.full}
               </span>
               <button
                 type="button"
                 onClick={() => setActiveIndex(index)}
                 className="rounded-full border border-cyber-orange/30 bg-cyber-dark/80 px-4 py-2 text-xs uppercase tracking-[0.22em] text-cyber-orange transition-colors hover:border-cyber-orange hover:bg-cyber-orange/10"
               >
-                Preview
+                {copy.preview}
               </button>
             </div>
           </div>
@@ -109,7 +124,7 @@ export default function ReporterGallery({
         <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-28 pb-6">
           <button
             type="button"
-            aria-label="Close screenshot preview"
+            aria-label={copy.close}
             onClick={() => setActiveIndex(null)}
             className="absolute inset-0 bg-black/85 backdrop-blur-md"
           />
@@ -121,7 +136,7 @@ export default function ReporterGallery({
               <button
                 type="button"
                 onClick={() => setActiveIndex(null)}
-                aria-label="Close screenshot preview"
+                aria-label={copy.close}
                 className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-cyber-orange/30 bg-black/80 text-cyber-orange shadow-lg shadow-black/30 transition-all hover:border-cyber-orange hover:bg-cyber-orange/10 hover:scale-105"
               >
                 <svg

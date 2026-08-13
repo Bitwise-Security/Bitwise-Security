@@ -17,9 +17,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     (service) => `/services/${service.id}`,
   );
 
-  return [...corePages, ...servicePages].map((path) => ({
+  const englishPages = [...corePages, ...servicePages];
+  const dutchPages = englishPages.map((path) =>
+    path === "" ? "/nl" : `/nl${path}`,
+  );
+
+  return [...englishPages, ...dutchPages].map((path) => ({
     url: `${SITE_URL}${path}`,
-    changeFrequency: path === "" ? "monthly" : "yearly",
-    priority: path === "" ? 1 : path === "/services" ? 0.9 : 0.7,
+    changeFrequency: path === "" || path === "/nl" ? "monthly" : "yearly",
+    priority:
+      path === "" || path === "/nl"
+        ? 1
+        : path === "/services" || path === "/nl/services"
+          ? 0.9
+          : 0.7,
   }));
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import ParticleCanvas from "@/components/homepage/ParticleCanvas";
 import FireCanvas from "@/components/homepage/FireCanvas";
 import homepageData from "@/data/homepage.json";
+import homepageDataNl from "@/data/homepage.nl.json";
 import SidebarIcons from "@/components/homepage/SidebarIcons";
 import BarChart from "@/components/homepage/BarChart";
 import HexGrid from "@/components/homepage/HexGrid";
@@ -12,8 +13,32 @@ import Ocean from "@/components/homepage/Ocean";
 import Shield from "@/components/homepage/Shield";
 import StatsCards from "@/components/homepage/StatsCards";
 import ThreatStream from "@/components/homepage/ThreatStream";
+import { useLocale } from "@/lib/use-locale";
+import { localizedPath } from "@/lib/i18n";
 
 export default function Home() {
+  const locale = useLocale();
+  const pageData = locale === "nl" ? homepageDataNl : homepageData;
+  const copy =
+    locale === "nl"
+      ? {
+          eyebrow: "[ HANDMATIG. METHODISCH. PRAKTISCH. ]",
+          title: "Vind zwakke plekken",
+          titleAccent: "voordat aanvallers dat doen.",
+          description:
+            "Handmatige pentesten voor webapplicaties, cloud, Active Directory, mobiele apps, broncode en hardware.",
+          contact: "Bespreek uw scope",
+          services: "Bekijk diensten",
+        }
+      : {
+          eyebrow: "[ MANUAL. METHODICAL. ACTIONABLE. ]",
+          title: "Find weaknesses",
+          titleAccent: "before attackers do.",
+          description:
+            "Manual penetration testing for web applications, cloud, Active Directory, mobile, source code, and hardware.",
+          contact: "Discuss your scope",
+          services: "View services",
+        };
   const [barH, setBarH] = useState([72, 100, 78]);
 
   useEffect(() => {
@@ -97,30 +122,29 @@ export default function Home() {
         >
           <section className="relative z-[22] -mb-5 w-[min(640px,92vw)] rounded-2xl border border-cyber-blue/35 bg-[#050d1e]/85 px-5 py-5 text-center shadow-2xl shadow-cyber-blue/15 backdrop-blur-md sm:px-8 sm:py-6">
             <p className="mb-2 font-mono text-[10px] font-semibold tracking-[0.28em] text-cyber-orange sm:text-xs">
-              [ MANUAL. METHODICAL. ACTIONABLE. ]
+              {copy.eyebrow}
             </p>
             <h1 className="font-orbitron text-[clamp(1.6rem,3vw,2.55rem)] font-black leading-tight text-white">
-              Find weaknesses{" "}
+              {copy.title}{" "}
               <span className="text-cyber-blue text-glow">
-                before attackers do.
+                {copy.titleAccent}
               </span>
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-gray-300 sm:text-base">
-              Manual penetration testing for web applications, cloud, Active
-              Directory, mobile, source code, and hardware.
+              {copy.description}
             </p>
             <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                href="/contact"
+                href={localizedPath("/contact", locale)}
                 className="rounded-lg bg-cyber-blue px-6 py-3 font-semibold text-cyber-dark transition-all hover:bg-cyan-300 hover:shadow-lg hover:shadow-cyber-blue/30 focus:outline-none focus:ring-2 focus:ring-cyan-200"
               >
-                Discuss your scope
+                {copy.contact}
               </Link>
               <Link
-                href="/services"
+                href={localizedPath("/services", locale)}
                 className="rounded-lg border border-cyber-blue/50 bg-cyber-dark/70 px-6 py-3 font-semibold text-gray-200 transition-all hover:border-cyber-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-cyber-blue"
               >
-                View services
+                {copy.services}
               </Link>
             </div>
           </section>
@@ -192,7 +216,7 @@ export default function Home() {
             display: "inline-block",
           }}
         >
-          {homepageData.footer.text}
+          {pageData.footer.text}
         </span>
       </div>
 

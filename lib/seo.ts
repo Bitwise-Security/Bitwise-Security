@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import type { Locale } from "@/lib/i18n";
+import { localizedPath, stripLocale } from "@/lib/i18n";
 
 export const SITE_NAME = "Bitwise Security";
 export const SITE_URL = "https://bitwise-security.nl";
@@ -10,6 +12,7 @@ type PageMetadataOptions = {
   description: string;
   path: string;
   index?: boolean;
+  locale?: Locale;
 };
 
 export function createPageMetadata({
@@ -17,14 +20,22 @@ export function createPageMetadata({
   description,
   path,
   index = true,
+  locale = "en",
 }: PageMetadataOptions): Metadata {
-  const canonicalPath = path.startsWith("/") ? path : `/${path}`;
+  const suppliedPath = path.startsWith("/") ? path : `/${path}`;
+  const englishPath = stripLocale(suppliedPath);
+  const canonicalPath = localizedPath(englishPath, locale);
 
   return {
-    title,
+    title: { absolute: `${title} | ${SITE_NAME}` },
     description,
     alternates: {
       canonical: canonicalPath,
+      languages: {
+        en: localizedPath(englishPath, "en"),
+        nl: localizedPath(englishPath, "nl"),
+        "x-default": localizedPath(englishPath, "en"),
+      },
     },
     robots: {
       index,
@@ -39,7 +50,8 @@ export function createPageMetadata({
     },
     openGraph: {
       type: "website",
-      locale: "en_NL",
+      locale: locale === "nl" ? "nl_NL" : "en_NL",
+      alternateLocale: locale === "nl" ? ["en_NL"] : ["nl_NL"],
       url: canonicalPath,
       siteName: SITE_NAME,
       title: `${title} | ${SITE_NAME}`,

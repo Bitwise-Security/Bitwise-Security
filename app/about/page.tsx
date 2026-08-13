@@ -2,8 +2,55 @@
 
 import { CyberBackground } from "@/components/common";
 import Image from "next/image";
+import { useLocale } from "@/lib/use-locale";
 
 export default function About() {
+  const locale = useLocale();
+  const copy = locale === "nl"
+    ? {
+        titlePrefix: "DE KERN",
+        titleAccent: "AANPAK",
+        status: "[ STATUS: GEVERIFIEERD ]",
+        specialist: "Beveiligingsspecialist",
+        about: "OVER MIJ",
+        intro: "Ik ben altijd gedreven geweest door nieuwsgierigheid naar hoe systemen werken en worden gebouwd. Hacking is voor mij niet alleen werk, maar een blijvende passie. Ik verdiep mij voortdurend in nieuwe software, verfijn mijn methodologie en onderzoek nieuwe manieren om beveiliging te verbeteren. Daardoor combineer ik actuele kennis met een creatieve, praktische aanpak in iedere opdracht.",
+        learning: "Blijven leren",
+        learningText: "Voortdurend onderzoek naar nieuwe aanvalstechnieken en verdedigingsmaatregelen",
+        creative: "Creatieve aanpak",
+        creativeText: "Denken als een aanvaller om kwetsbaarheden te vinden die anderen missen",
+        expertise: "Diensten en expertise",
+        expertiseText: "Ik voer uitgebreide beveiligingsonderzoeken uit om kwetsbaarheden te vinden voordat ze worden misbruikt. Mijn kernwerk omvat webapplicaties, Active Directory, Azure, mobiele apps, broncode en hardware. Van een start-up met een eerste MVP tot een organisatie met terugkerende compliancebehoeften: u ontvangt een helder en praktisch rapport waarin remediatie op basis van werkelijk bedrijfsrisico wordt geprioriteerd.",
+        why: "Waarom samenwerken met mij?",
+        whyText: "Dreigingen blijven veranderen. Daarom werkt u met een specialist die zich voortdurend blijft ontwikkelen. Ik bezit de erkende certificeringen OSCP, OSWE en OSEP en heb ervaring met het vinden van kritieke kwetsbaarheden in complexe omgevingen. U krijgt geen oppervlakkige scan, maar een betrokken beveiligingspartner. Iedere opdracht wordt afgesloten met een duidelijke toelichting zodat uw team de bevindingen en vervolgstappen begrijpt.",
+        approach: "Mijn aanpak",
+        approachText: "Beveiliging is geen standaardoplossing. Ik werk volgens een gestructureerde, ethische methode: van verkenning en kwetsbaarheidsanalyse tot veilige exploitatie en rapportage. Erkende kaders zoals OWASP en PTES ondersteunen de diepgang. Het doel is niet alleen fouten vinden, maar uw ontwikkelteam een duidelijke route bieden om de beveiliging te verbeteren zonder de dagelijkse werkzaamheden onnodig te verstoren.",
+        steps: ["Verkenning", "Analyse", "Exploitatie", "Rapportage"],
+        deliverables: "Gedetailleerde oplevering",
+        deliverablesText: "Na iedere opdracht ontvangt u meer dan een lijst met kwetsbaarheden. Een managementsamenvatting maakt het bedrijfsrisico begrijpelijk voor niet-technische belanghebbenden, terwijl de technische verdieping uw ontwikkelteam ondersteunt. Iedere bevinding bevat een ernstscore, proof-of-concept en heldere remediatiestappen.",
+        deliverableItems: ["Managementsamenvatting", "Technische verdieping", "Ernstscores", "Remediatiestappen"],
+      }
+    : {
+        titlePrefix: "THE CORE",
+        titleAccent: "PROTOCOL",
+        status: "[ STATUS: AUTHORIZED ]",
+        specialist: "Security Specialist",
+        about: "ABOUT ME",
+        intro: "I have always been driven by a deep-seated curiosity about how systems work and how they are built. For me, hacking isn't just a career—it's a lifelong passion. I am constantly diving into the latest software, refining my methodology, and studying new ways to improve security. This relentless drive to learn ensures that when I test your environment, I am bringing the most up-to-date knowledge and a creative problem-solving approach to every project.",
+        learning: "Continuous Learning",
+        learningText: "Always studying the latest attack vectors and defense mechanisms",
+        creative: "Creative Approach",
+        creativeText: "Thinking like an attacker to find vulnerabilities others miss",
+        expertise: "Services & Expertise",
+        expertiseText: "I specialize in comprehensive security assessments designed to identify vulnerabilities before they can be exploited. My core services cover web applications, Active Directory, Azure, mobile applications, source code, and hardware. Whether you are a startup securing an MVP or an established enterprise needing recurring compliance checks, I provide detailed, actionable reports that prioritize remediation based on actual business risk.",
+        why: "Why Work With Me?",
+        whyText: "In an era of evolving threats, you need a partner who stays ahead of the curve. I hold industry-recognized OSCP, OSWE, and OSEP certifications and have experience uncovering critical vulnerabilities in complex environments. You are not just getting a scan—you are getting a dedicated security partner. Every engagement concludes with a comprehensive debriefing so your team understands the findings and the necessary remediation steps.",
+        approach: "My Approach",
+        approachText: "Security is not a one-size-fits-all solution. I follow a structured, ethical methodology beginning with deep reconnaissance and moving through vulnerability analysis to exploitation and reporting. I use industry-standard OWASP and PTES frameworks to ensure thoroughness. My goal is not just to find bugs, but to provide a clear roadmap for your development team to strengthen security without disrupting daily operations.",
+        steps: ["Reconnaissance", "Analysis", "Exploitation", "Reporting"],
+        deliverables: "Detailed Deliverables",
+        deliverablesText: "At the conclusion of every engagement, you receive more than a list of vulnerabilities. I provide an Executive Summary for non-technical stakeholders alongside a Technical Deep-Dive for your engineering team. Each finding includes a severity rating, a proof-of-concept, and clear remediation steps.",
+        deliverableItems: ["Executive Summary", "Technical Deep-Dive", "Severity Ratings", "Remediation Steps"],
+      };
   return (
     <main className="relative min-h-screen pt-24 pb-16">
       <CyberBackground />
@@ -11,12 +58,12 @@ export default function About() {
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold mb-4">
-            <span className="text-white">THE CORE</span>{" "}
-            <span className="text-cyber-blue text-glow">PROTOCOL</span>
+            <span className="text-white">{copy.titlePrefix}</span>{" "}
+            <span className="text-cyber-blue text-glow">{copy.titleAccent}</span>
           </h1>
           <div className="h-1 w-32 bg-gradient-to-r from-cyber-blue to-cyber-orange mx-auto"></div>
           <p className="text-cyber-orange font-mono text-sm mt-4">
-            [ STATUS: AUTHORIZED ]
+            {copy.status}
           </p>
         </div>
 
@@ -39,7 +86,11 @@ export default function About() {
                     </svg> */}
                     <Image
                       src="/profile.jpg"
-                      alt="Bitwise Security penetration testing specialist"
+                      alt={
+                        locale === "nl"
+                          ? "Pentestspecialist van Bitwise Security"
+                          : "Bitwise Security penetration testing specialist"
+                      }
                       width={400}
                       height={400}
                       className="w-full h-full object-cover rounded-xl"
@@ -48,7 +99,7 @@ export default function About() {
                 </div>
                 <div className="mt-4 text-center">
                   <h3 className="text-xl font-bold text-white mb-1">
-                    Security Specialist
+                    {copy.specialist}
                   </h3>
                   <p className="text-cyber-blue text-sm font-mono">
                     OSCP • OSWE • OSEP
@@ -62,18 +113,11 @@ export default function About() {
           <div className="lg:col-span-2">
             <div className="bg-cyber-darkBlue/80 backdrop-blur-md border border-cyber-blue/30 rounded-2xl p-8 box-glow scanline">
               <h2 className="text-3xl font-bold text-cyber-orange mb-6">
-                ABOUT ME
+                {copy.about}
               </h2>
 
               <p className="text-gray-300 leading-relaxed mb-6 text-lg">
-                I have always been driven by a deep-seated curiosity about how
-                systems work and how they are built. For me, hacking isn&apos;t
-                just a career&mdash;it&apos;s a lifelong passion. I am
-                constantly diving into the latest software, refining my
-                methodology, and studying new ways to improve security. This
-                relentless drive to learn ensures that when I test your
-                environment, I am bringing the most up-to-date knowledge and a
-                creative problem-solving approach to every project.
+                {copy.intro}
               </p>
 
               <div className="grid md:grid-cols-2 gap-6 mt-8">
@@ -89,11 +133,10 @@ export default function About() {
                   </div>
                   <div>
                     <h4 className="text-white font-semibold mb-1">
-                      Continuous Learning
+                      {copy.learning}
                     </h4>
                     <p className="text-gray-400 text-sm">
-                      Always studying the latest attack vectors and defense
-                      mechanisms
+                      {copy.learningText}
                     </p>
                   </div>
                 </div>
@@ -110,11 +153,10 @@ export default function About() {
                   </div>
                   <div>
                     <h4 className="text-white font-semibold mb-1">
-                      Creative Approach
+                      {copy.creative}
                     </h4>
                     <p className="text-gray-400 text-sm">
-                      Thinking like an attacker to find vulnerabilities others
-                      miss
+                      {copy.creativeText}
                     </p>
                   </div>
                 </div>
@@ -128,34 +170,20 @@ export default function About() {
           {/* Services & Expertise */}
           <div className="bg-cyber-darkBlue/80 backdrop-blur-md border border-cyber-blue/30 rounded-2xl p-8 box-glow">
             <h2 className="text-2xl font-bold text-cyber-blue mb-4">
-              Services & Expertise
+              {copy.expertise}
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              I specialize in comprehensive security assessments designed to
-              identify vulnerabilities before they can be exploited. My core
-              services include Web Application Penetration Testing, Network
-              Security Audits, and Social Engineering simulations. Whether you
-              are a startup looking to secure your first MVP or an established
-              enterprise needing a recurring compliance check, I provide
-              detailed, actionable reports that prioritize remediation based on
-              actual risk to your business.
+              {copy.expertiseText}
             </p>
           </div>
 
           {/* Why Work With Me */}
           <div className="bg-cyber-darkBlue/80 backdrop-blur-md border border-cyber-orange/30 rounded-2xl p-8 box-glow-orange">
             <h2 className="text-2xl font-bold text-cyber-orange mb-4">
-              Why Work With Me?
+              {copy.why}
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              In an era of evolving threats, you need a partner who stays ahead
-              of the curve. I hold industry-recognized certifications (OSCP,
-              OSWE, and OSEP) and have a proven track record of uncovering
-              critical vulnerabilities in complex environments. When you hire
-              me, you aren&apos;t just getting a scan&mdash;you&apos;re getting
-              a dedicated security partner. Every engagement concludes with a
-              comprehensive debriefing session to ensure your team fully
-              understands the findings and the necessary steps for remediation.
+              {copy.whyText}
             </p>
           </div>
         </div>
@@ -163,21 +191,14 @@ export default function About() {
         {/* My Approach */}
         <div className="bg-cyber-darkBlue/80 backdrop-blur-md border border-cyber-blue/30 rounded-2xl p-8 box-glow mb-8">
           <h2 className="text-2xl font-bold text-cyber-blue mb-4">
-            My Approach
+            {copy.approach}
           </h2>
           <p className="text-gray-300 leading-relaxed mb-6">
-            Security is not a &apos;one-size-fits-all&apos; solution. I follow a
-            structured, ethical methodology beginning with deep reconnaissance
-            and moving through vulnerability analysis to exploitation and
-            reporting. I utilize the industry-standard OWASP and PTES frameworks
-            to ensure thoroughness. My goal is not just to find
-            &apos;bugs,&apos; but to provide a clear roadmap for your
-            development team to strengthen your overall security posture without
-            disrupting your daily operations.
+            {copy.approachText}
           </p>
 
           <div className="grid md:grid-cols-4 gap-4">
-            {["Reconnaissance", "Analysis", "Exploitation", "Reporting"].map(
+            {copy.steps.map(
               (step, index) => (
                 <div
                   key={index}
@@ -196,32 +217,28 @@ export default function About() {
         {/* Detailed Deliverables */}
         <div className="bg-cyber-darkBlue/80 backdrop-blur-md border border-cyber-orange/30 rounded-2xl p-8 box-glow-orange">
           <h2 className="text-2xl font-bold text-cyber-orange mb-4">
-            Detailed Deliverables
+            {copy.deliverables}
           </h2>
           <p className="text-gray-300 leading-relaxed mb-6">
-            At the conclusion of every engagement, you receive more than just a
-            list of vulnerabilities. I provide an Executive Summary for
-            non-technical stakeholders to understand business risk, alongside a
-            Technical Deep-Dive for your engineering team. Each finding includes
-            a severity rating, a proof-of-concept, and clear remediation steps.
+            {copy.deliverablesText}
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3 bg-cyber-dark/30 rounded-lg p-4">
               <div className="w-2 h-2 bg-cyber-orange rounded-full animate-pulse"></div>
-              <span className="text-gray-300">Executive Summary</span>
+              <span className="text-gray-300">{copy.deliverableItems[0]}</span>
             </div>
             <div className="flex items-center gap-3 bg-cyber-dark/30 rounded-lg p-4">
               <div className="w-2 h-2 bg-cyber-orange rounded-full animate-pulse"></div>
-              <span className="text-gray-300">Technical Deep-Dive</span>
+              <span className="text-gray-300">{copy.deliverableItems[1]}</span>
             </div>
             <div className="flex items-center gap-3 bg-cyber-dark/30 rounded-lg p-4">
               <div className="w-2 h-2 bg-cyber-orange rounded-full animate-pulse"></div>
-              <span className="text-gray-300">Severity Ratings</span>
+              <span className="text-gray-300">{copy.deliverableItems[2]}</span>
             </div>
             <div className="flex items-center gap-3 bg-cyber-dark/30 rounded-lg p-4">
               <div className="w-2 h-2 bg-cyber-orange rounded-full animate-pulse"></div>
-              <span className="text-gray-300">Remediation Steps</span>
+              <span className="text-gray-300">{copy.deliverableItems[3]}</span>
             </div>
           </div>
         </div>
