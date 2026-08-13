@@ -69,7 +69,7 @@ function emailBody(contact: Contact): { html: string; text: string } {
 
   return {
     html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#0ea5e9">New Security Inquiry</h2>
+      <h2 style="color:#0ea5e9">New Project Inquiry</h2>
       <table style="width:100%;border-collapse:collapse">
         <tr><td style="padding:8px;font-weight:bold">Name:</td><td style="padding:8px">${name}</td></tr>
         <tr><td style="padding:8px;font-weight:bold">Email:</td><td style="padding:8px">${email}</td></tr>
@@ -80,7 +80,7 @@ function emailBody(contact: Contact): { html: string; text: string } {
       <p style="background:#f5f5f5;padding:16px;border-radius:8px">${message}</p>
     </div>`,
     text: [
-      "New Security Inquiry",
+      "New Project Inquiry",
       `Name: ${contact.name}`,
       `Email: ${contact.email}`,
       `Company: ${contact.company || "—"}`,
@@ -157,7 +157,7 @@ export const onRequestPost: PagesFunction<Cloudflare.Env> = async ({
         from: env.RESEND_FROM_EMAIL,
         to: [env.CONTACT_EMAIL],
         reply_to: contact.email,
-        subject: `Security Inquiry from ${contact.name.replace(/[\r\n]+/g, " ")}`,
+        subject: `${contact.service.replace(/[\r\n]+/g, " ")} inquiry from ${contact.name.replace(/[\r\n]+/g, " ")}`,
         html: body.html,
         text: body.text,
       }),

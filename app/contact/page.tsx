@@ -147,8 +147,8 @@ export default function Contact() {
           </h1>
           <div className="h-1 w-32 bg-gradient-to-r from-cyber-blue to-cyber-orange mx-auto mb-6"></div>
           <p className="text-gray-300 text-xl max-w-3xl mx-auto">
-            Ready to secure your infrastructure? Let&apos;s discuss your
-            security needs.
+            Need a security assessment or a professional website? Let&apos;s
+            discuss your goals and the right next step.
           </p>
         </div>
 
@@ -271,7 +271,7 @@ export default function Contact() {
                   onChange={handleChange}
                   rows={5}
                   className="w-full px-4 py-3 bg-cyber-dark border border-cyber-blue/30 rounded-lg text-white placeholder-gray-500 focus:border-cyber-blue focus:outline-none focus:ring-2 focus:ring-cyber-blue/50 transition-all resize-none"
-                  placeholder="Tell us about your security needs..."
+                  placeholder="Tell us about your project, goals, and timeline..."
                 />
               </div>
 
@@ -368,6 +368,77 @@ export default function Contact() {
             </div>
           </div>
         </div>
+
+        <section
+          aria-labelledby="website-work-heading"
+          className="mt-24 border-t border-cyber-blue/20 pt-16"
+        >
+          <div className="max-w-3xl mb-10">
+            <p className="text-sm font-mono tracking-[0.2em] text-cyber-blue mb-3">
+              {contactData.websiteProjects.eyebrow}
+            </p>
+            <h2
+              id="website-work-heading"
+              className="text-3xl md:text-4xl font-bold text-white mb-4"
+            >
+              {contactData.websiteProjects.title}
+            </h2>
+            <p className="text-lg leading-relaxed text-gray-300">
+              {contactData.websiteProjects.description}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {contactData.websiteProjects.items.map((project) => (
+              <a
+                key={project.url}
+                href={project.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex min-h-[320px] flex-col rounded-2xl border border-cyber-blue/25 bg-cyber-darkBlue/75 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyber-blue/70 hover:shadow-lg hover:shadow-cyber-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-dark"
+              >
+                <div className="flex items-start justify-between gap-4 mb-10">
+                  <span className="font-mono text-sm text-cyber-blue">
+                    {project.number}
+                  </span>
+                  <span className="rounded-full border border-cyber-orange/35 bg-cyber-orange/10 px-3 py-1 text-xs font-medium text-cyber-orange">
+                    {project.type}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-white mb-3 transition-colors group-hover:text-cyber-blue">
+                  {project.title}
+                </h3>
+                <p className="text-sm leading-6 text-gray-300">
+                  {project.description}
+                </p>
+
+                <div className="mt-auto border-t border-cyber-blue/15 pt-5">
+                  <span className="block truncate font-mono text-xs text-gray-400 mb-2">
+                    {project.domain}
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyber-blue">
+                    Visit live project
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M7 17 17 7M7 7h10v10"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
