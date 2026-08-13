@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { CyberBackground } from "@/components/common";
@@ -395,45 +396,55 @@ export default function Contact() {
                 href={project.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex min-h-[320px] flex-col rounded-2xl border border-cyber-blue/25 bg-cyber-darkBlue/75 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyber-blue/70 hover:shadow-lg hover:shadow-cyber-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-dark"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-cyber-blue/25 bg-cyber-darkBlue/75 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyber-blue/70 hover:shadow-lg hover:shadow-cyber-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue focus-visible:ring-offset-2 focus-visible:ring-offset-cyber-dark"
               >
-                <div className="flex items-start justify-between gap-4 mb-10">
-                  <span className="font-mono text-sm text-cyber-blue">
+                <div className="relative aspect-[16/10] overflow-hidden border-b border-cyber-blue/20 bg-cyber-dark">
+                  <Image
+                    src={project.image}
+                    alt={project.imageAlt}
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-cyber-dark/60 via-transparent to-cyber-dark/10" />
+                  <span className="absolute left-4 top-4 rounded-md border border-cyber-blue/35 bg-cyber-dark/90 px-2.5 py-1 font-mono text-xs text-cyber-blue backdrop-blur-sm">
                     {project.number}
                   </span>
-                  <span className="rounded-full border border-cyber-orange/35 bg-cyber-orange/10 px-3 py-1 text-xs font-medium text-cyber-orange">
+                  <span className="absolute right-4 top-4 rounded-full border border-cyber-orange/40 bg-cyber-dark/90 px-3 py-1 text-xs font-medium text-cyber-orange backdrop-blur-sm">
                     {project.type}
                   </span>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white mb-3 transition-colors group-hover:text-cyber-blue">
-                  {project.title}
-                </h3>
-                <p className="text-sm leading-6 text-gray-300">
-                  {project.description}
-                </p>
+                <div className="flex flex-1 flex-col p-6">
+                  <h3 className="text-2xl font-bold text-white mb-3 transition-colors group-hover:text-cyber-blue">
+                    {project.title}
+                  </h3>
+                  <p className="text-sm leading-6 text-gray-300">
+                    {project.description}
+                  </p>
 
-                <div className="mt-auto border-t border-cyber-blue/15 pt-5">
-                  <span className="block truncate font-mono text-xs text-gray-400 mb-2">
-                    {project.domain}
-                  </span>
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyber-blue">
-                    Visit live project
-                    <svg
-                      aria-hidden="true"
-                      className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M7 17 17 7M7 7h10v10"
-                      />
-                    </svg>
-                  </span>
+                  <div className="mt-8 border-t border-cyber-blue/15 pt-5 md:mt-auto">
+                    <span className="block truncate font-mono text-xs text-gray-400 mb-2">
+                      {project.domain}
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyber-blue">
+                      Visit live project
+                      <svg
+                        aria-hidden="true"
+                        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M7 17 17 7M7 7h10v10"
+                        />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </a>
             ))}
