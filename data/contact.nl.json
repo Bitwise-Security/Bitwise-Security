@@ -1,0 +1,87 @@
+{
+  "contactInfo": {
+    "email": "info@bitwise-security.nl",
+    "location": "Nederland",
+    "responseTime": "Binnen 24 uur"
+  },
+  "certifications": ["OSCP", "OSWE", "OSEP"],
+  "availability": {
+    "title": "Beschikbaarheid",
+    "description": "Beschikbaar voor beveiligingsonderzoeken, advies en geselecteerde websiteprojecten. De planning is afhankelijk van de scope en complexiteit."
+  },
+  "serviceOptions": [
+    "Webapplicatie-pentest",
+    "Websiteontwikkeling",
+    "Active Directory-pentest",
+    "Azure-beveiligingsaudit",
+    "Pentest van mobiele app",
+    "Broncodeanalyse",
+    "Hardware-pentest",
+    "Anders"
+  ],
+  "websiteProjects": {
+    "eyebrow": "[ GESELECTEERD WEBSITEWERK ]",
+    "title": "Gebouwd voor echte organisaties, niet voor demoschermen.",
+    "description": "Een selectie van liveprojecten die informatie overzichtelijk maken, vertrouwen opbouwen en bezoekers helpen de volgende stap te zetten.",
+    "items": [
+      {
+        "number": "01",
+        "type": "Toernooiplatform",
+        "title": "Hokori no Kata Taikai",
+        "description": "Een evenementgerichte website met programma, matindeling, toernooi-informatie en toegang tot de livestream.",
+        "image": "/project-previews/kata-tournament.webp",
+        "imageAlt": "Homepage van de toernooiwebsite Hokori no Kata Taikai 2026",
+        "url": "https://dojo-hokori-meiyo-kata-tournament.pages.dev",
+        "domain": "Toernooiwebsite"
+      },
+      {
+        "number": "02",
+        "type": "Dojowebsite",
+        "title": "Dojo Hokori Meiyo",
+        "description": "Een tweetalige clubwebsite met lesinformatie, roosters, evenementen en een duidelijke route naar een proefles.",
+        "image": "/project-previews/dojo-hokori-meiyo.webp",
+        "imageAlt": "Homepage van de website van Dojo Hokori Meiyo",
+        "url": "https://dojohokorimeiyo.nl/nl",
+        "domain": "dojohokorimeiyo.nl"
+      },
+      {
+        "number": "03",
+        "type": "Leadgeneratiewebsite",
+        "title": "BJJ Zoetermeer",
+        "description": "Een conversiegerichte vechtsportwebsite met lessen, prijzen, roosters en gratis proeflessen.",
+        "image": "/project-previews/bjj-zoetermeer.webp",
+        "imageAlt": "Homepage van de website BJJ Zoetermeer",
+        "url": "https://bjjzoetermeer.com/",
+        "domain": "bjjzoetermeer.com"
+      }
+    ]
+  },
+  "formFields": [
+    { "id": "name", "label": "Volledige naam", "type": "text", "required": true, "placeholder": "Jan de Vries" },
+    { "id": "email", "label": "E-mailadres", "type": "email", "required": true, "placeholder": "jan@bedrijf.nl" },
+    { "id": "company", "label": "Bedrijfsnaam", "type": "text", "required": false, "placeholder": "Uw bedrijf" },
+    { "id": "service", "label": "Dienst waarin u geïnteresseerd bent", "type": "select", "required": true, "placeholder": "Kies een dienst" },
+    { "id": "message", "label": "Bericht", "type": "textarea", "required": true, "placeholder": "Vertel kort over uw project, doelen en planning...", "rows": 5 }
+  ],
+  "contactMethods": [
+    {
+      "icon": "email",
+      "title": "E-mail",
+      "value": "info@bitwise-security.nl",
+      "link": "mailto:info@bitwise-security.nl",
+      "svgPath": "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"
+    },
+    {
+      "icon": "location",
+      "title": "Locatie",
+      "value": "Nederland",
+      "svgPath": "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+    },
+    {
+      "icon": "response",
+      "title": "Reactietijd",
+      "value": "Binnen 24 uur",
+      "svgPath": "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+    }
+  ]
+}

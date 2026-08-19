@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/use-locale";
+import { localizedPath } from "@/lib/i18n";
 
 const GOOGLE_TAG_ID = "G-PYJ7K51X2H";
 const CONSENT_STORAGE_KEY = "bitwise-google-consent";
@@ -37,6 +39,26 @@ function deleteGoogleCookies() {
 }
 
 export default function GoogleTagConsent() {
+  const locale = useLocale();
+  const copy = locale === "nl"
+    ? {
+        aria: "Cookievoorkeuren",
+        title: "Analytics- en advertentiecookies",
+        text: "Wij gebruiken Google Analytics om het gebruik van de website en advertentieprestaties te meten. Opslag en advertentiefuncties blijven uitgeschakeld totdat u toestemming geeft. U kunt uw keuze altijd wijzigen. Lees ons",
+        privacy: "Privacy- en cookiebeleid",
+        accept: "Alles accepteren",
+        reject: "Niet-essentieel weigeren",
+        settings: "Cookie-instellingen",
+      }
+    : {
+        aria: "Cookie preferences",
+        title: "Analytics and advertising cookies",
+        text: "We use Google Analytics to understand site usage and measure advertising performance. Storage and advertising use remain disabled unless you accept. You can change your choice at any time. Read our",
+        privacy: "Privacy & Cookie Policy",
+        accept: "Accept all",
+        reject: "Reject non-essential",
+        settings: "Cookie settings",
+      };
   const [choice, setChoice] = useState<ConsentState>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -67,24 +89,21 @@ export default function GoogleTagConsent() {
     <>
       {showConsentPanel ? (
         <section
-          aria-label="Cookie preferences"
+          aria-label={copy.aria}
           className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-3xl rounded-xl border border-cyber-blue/40 bg-cyber-dark/95 p-5 text-gray-200 shadow-2xl shadow-cyber-blue/20 backdrop-blur-md sm:p-6"
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-xl">
               <h2 className="font-orbitron text-base font-bold text-white">
-                Analytics and advertising cookies
+                {copy.title}
               </h2>
               <p className="mt-2 text-sm leading-6 text-gray-300">
-                We use Google Analytics to understand site usage and measure
-                advertising performance. Storage and advertising use remain
-                disabled unless you accept. You can change your choice at any
-                time. Read our{" "}
+                {copy.text}{" "}
                 <Link
-                  href="/privacy"
+                  href={localizedPath("/privacy", locale)}
                   className="text-cyber-blue underline decoration-cyber-blue/50 underline-offset-4 hover:text-cyan-300"
                 >
-                  Privacy &amp; Cookie Policy
+                  {copy.privacy}
                 </Link>
                 .
               </p>
@@ -95,14 +114,14 @@ export default function GoogleTagConsent() {
                 onClick={() => saveChoice("granted")}
                 className="rounded-lg bg-cyber-blue px-4 py-2.5 text-sm font-semibold text-cyber-dark transition-colors hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-200 focus:ring-offset-2 focus:ring-offset-cyber-dark"
               >
-                Accept all
+                {copy.accept}
               </button>
               <button
                 type="button"
                 onClick={() => saveChoice("denied")}
                 className="rounded-lg border border-gray-500 px-4 py-2.5 text-sm font-semibold text-gray-200 transition-colors hover:border-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:ring-offset-cyber-dark"
               >
-                Reject non-essential
+                {copy.reject}
               </button>
             </div>
           </div>
@@ -114,10 +133,10 @@ export default function GoogleTagConsent() {
             onClick={() => setSettingsOpen(true)}
             className="rounded-md border border-cyber-blue/30 bg-cyber-dark/90 px-3 py-2 text-gray-300 shadow-lg backdrop-blur-sm transition-colors hover:border-cyber-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-cyber-blue"
           >
-            Cookie settings
+            {copy.settings}
           </button>
           <Link
-            href="/privacy"
+            href={localizedPath("/privacy", locale)}
             className="rounded-md border border-gray-600/40 bg-cyber-dark/90 px-3 py-2 text-gray-400 shadow-lg backdrop-blur-sm transition-colors hover:border-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             Privacy

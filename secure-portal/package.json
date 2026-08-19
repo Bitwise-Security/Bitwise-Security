@@ -1,0 +1,29 @@
+{
+  "name": "bitwise-secure-portal",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:migrate": "npm run db:migrate:local --workspace @bitwise-portal/edge",
+    "db:migrate:staging": "npm run db:migrate:staging --workspace @bitwise-portal/edge",
+    "db:migrate:production": "npm run db:migrate:production --workspace @bitwise-portal/edge",
+    "db:seed": "npm run db:seed --workspace @bitwise-portal/api",
+    "cf:types": "npm run cf:types --workspace @bitwise-portal/edge",
+    "cf:check": "npm run cf:check --workspace @bitwise-portal/edge",
+    "cf:check:production": "npm run cf:check:production --workspace @bitwise-portal/edge",
+    "cf:dev": "npm run cf:dev --workspace @bitwise-portal/edge",
+    "cf:bootstrap:staging": "npm run cf:bootstrap:staging --workspace @bitwise-portal/edge",
+    "cf:deploy:staging": "npm run cf:deploy:staging --workspace @bitwise-portal/edge",
+    "cf:bootstrap:production": "npm run cf:bootstrap:production --workspace @bitwise-portal/edge",
+    "cf:deploy:production": "npm run cf:deploy:production --workspace @bitwise-portal/edge"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -7,10 +7,11 @@
   "certifications": ["OSCP", "OSWE", "OSEP"],
   "availability": {
     "title": "Availability",
-    "description": "Available for security assessments and consultations. Projects are scheduled based on scope and complexity."
+    "description": "Available for security assessments, consultations, and selected website development projects. Projects are scheduled based on scope and complexity."
   },
   "serviceOptions": [
     "Web Application Pentesting",
+    "Website Development",
     "Active Directory Pentesting",
     "Azure Security Audit",
     "Mobile App Pentesting",
@@ -18,6 +19,43 @@
     "Hardware Pentesting",
     "Other"
   ],
+  "websiteProjects": {
+    "eyebrow": "[ SELECTED WEBSITE WORK ]",
+    "title": "Built for real organisations, not demo screens.",
+    "description": "A selection of live projects designed to make information clear, build trust, and help visitors take the next step.",
+    "items": [
+      {
+        "number": "01",
+        "type": "Tournament platform",
+        "title": "Hokori no Kata Taikai",
+        "description": "An event-focused experience with programme details, mat schedules, tournament information, and live-stream access.",
+        "image": "/project-previews/kata-tournament.webp",
+        "imageAlt": "Homepage of the Hokori no Kata Taikai 2026 tournament website",
+        "url": "https://dojo-hokori-meiyo-kata-tournament.pages.dev",
+        "domain": "Tournament website"
+      },
+      {
+        "number": "02",
+        "type": "Dojo website",
+        "title": "Dojo Hokori Meiyo",
+        "description": "A bilingual club website with class information, schedules, events, and a clear route to a trial lesson.",
+        "image": "/project-previews/dojo-hokori-meiyo.webp",
+        "imageAlt": "Homepage of the Dojo Hokori Meiyo website",
+        "url": "https://dojohokorimeiyo.nl/nl",
+        "domain": "dojohokorimeiyo.nl"
+      },
+      {
+        "number": "03",
+        "type": "Lead-generation website",
+        "title": "BJJ Zoetermeer",
+        "description": "A conversion-focused martial arts website covering classes, pricing, schedules, and free trial lessons.",
+        "image": "/project-previews/bjj-zoetermeer.webp",
+        "imageAlt": "Homepage of the BJJ Zoetermeer website",
+        "url": "https://bjjzoetermeer.com/",
+        "domain": "bjjzoetermeer.com"
+      }
+    ]
+  },
   "formFields": [
     {
       "id": "name",
@@ -52,7 +90,7 @@
       "label": "Message",
       "type": "textarea",
       "required": true,
-      "placeholder": "Tell us about your security needs...",
+      "placeholder": "Tell us about your project, goals, and timeline...",
       "rows": 5
     }
   ],

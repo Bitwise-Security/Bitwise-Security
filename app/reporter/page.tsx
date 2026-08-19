@@ -1,14 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { CyberBackground } from "@/components/common";
-import reporterData from "@/data/reporter.json";
+import reporterDataEn from "@/data/reporter.json";
+import reporterDataNl from "@/data/reporter.nl.json";
 import ReporterGallery from "@/components/reporter/ReporterGallery";
-
-export const metadata = {
-  title: reporterData.seo.title,
-  description: reporterData.seo.description,
-};
+import { useLocale } from "@/lib/use-locale";
+import { localizedPath } from "@/lib/i18n";
 
 export default function ReporterPage() {
+  const locale = useLocale();
+  const reporterData = locale === "nl" ? reporterDataNl : reporterDataEn;
+
   return (
     <main className="relative min-h-screen pt-24 pb-16">
       <CyberBackground />
@@ -158,7 +161,7 @@ export default function ReporterPage() {
           <div className="flex items-end justify-between gap-4 mb-6">
             <div>
               <p className="text-cyber-orange font-mono text-xs tracking-[0.35em] mb-2">
-                PRODUCT IN MOTION
+                {locale === "nl" ? "PRODUCT IN GEBRUIK" : "PRODUCT IN MOTION"}
               </p>
               <h2 className="text-3xl font-bold text-white">
                 {reporterData.gallery.title}
@@ -169,7 +172,7 @@ export default function ReporterPage() {
             </p>
           </div>
 
-          <ReporterGallery items={reporterData.gallery.items} />
+          <ReporterGallery items={reporterData.gallery.items} productOnly />
         </section>
 
         <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8">
@@ -193,13 +196,13 @@ export default function ReporterPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href="/contact"
+                href={localizedPath("/contact", locale)}
                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyber-blue to-cyan-500 px-6 py-3 font-semibold text-cyber-dark transition-transform duration-300 hover:scale-105"
               >
                 {reporterData.delivery.primaryCta}
               </Link>
               <Link
-                href="/services"
+                href={localizedPath("/services", locale)}
                 className="inline-flex items-center justify-center rounded-xl border border-cyber-orange/40 bg-cyber-dark/50 px-6 py-3 font-semibold text-white transition-colors duration-300 hover:border-cyber-orange hover:text-cyber-orange"
               >
                 {reporterData.delivery.secondaryCta}

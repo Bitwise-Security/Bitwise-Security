@@ -1,0 +1,88 @@
+{
+  "seo": {
+    "title": "Bitwise Security - Rapportagetool",
+    "description": "Bitwise Pentest Reporter is een veilige werkruimte voor opdrachten, bevindingen, bewijs, klanttoegang en professionele rapportage."
+  },
+  "hero": {
+    "eyebrow": "[ BITWISE REPORTER ]",
+    "titlePrefix": "RAPPORTAGE",
+    "titleAccent": "DIE WERKT",
+    "description": "Bitwise Pentest Reporter is een veilige webomgeving om bevindingen vast te leggen, samen te werken en professionele rapporten via een eigen klantportaal op te leveren."
+  },
+  "pillars": [
+    { "label": "Veilig", "title": "Veilig opleveren", "text": "Ontworpen om gevoelige onderzoeksgegevens met dezelfde zorgvuldigheid te behandelen als het beveiligingsonderzoek zelf." },
+    { "label": "Gestructureerd", "title": "Alles op één plek", "text": "Opdrachten, bevindingen, bewijs, exports en klanttoegang blijven gedurende het hele proces met elkaar verbonden." },
+    { "label": "In eigen stijl", "title": "Een portaal dat bij u past", "text": "De klantomgeving gebruikt uw logo en kleuren voor een professionele en consistente ervaring." }
+  ],
+  "audience": [
+    { "title": "Securityconsultants", "text": "Houd opdrachten gestructureerd, versieerbaar en eenvoudig te beoordelen zonder losse documenten." },
+    { "title": "Interne red teams", "text": "Beheer bevindingen, bewijs en remediatievoortgang in één gecontroleerde werkruimte." },
+    { "title": "Belanghebbenden bij de klant", "text": "Geef goedgekeurde toegang tot een eigen portaal zonder volledige beheerrechten." }
+  ],
+  "trust": {
+    "title": "VERTROUWEN EN BEHEER",
+    "text": "Ontworpen voor productie met configuratie per omgeving, verstevigde sessies, optionele transactionele e-mail en duidelijke privacy- en bewaarkeuzes voor gevoelige testgegevens."
+  },
+  "solves": {
+    "title": "WAT HET OPLOST",
+    "text": "Gestructureerde rapportage voorkomt onduidelijkheid na de test en maakt prioriteren, intern rapporteren en aansluiten op bestaande risicokaders eenvoudiger.",
+    "highlights": ["Consistente oplevering", "Gecontroleerde klanttoegang", "Bewijs gekoppeld aan bevindingen", "Professionele exports"]
+  },
+  "capabilities": {
+    "title": "Belangrijkste functies",
+    "items": [
+      { "title": "Werkruimte per opdracht", "text": "Scope, methodologie, managementsamenvatting, bijlagen, scoringsmodellen, rapportversies en vergrendeling voor goedkeuring." },
+      { "title": "Uitgebreide bevindingen", "text": "Ernst, CVSS, MITRE ATT&CK, CWE/CVE, compliance-tags, reproductiestappen, remediatie en zichtbaarheid voor klanten." },
+      { "title": "Bewijs en uploads", "text": "Screenshots en bijlagen gekoppeld aan bevindingen, met passende limieten en zorgvuldige omgang met gevoelig materiaal." },
+      { "title": "Klantportaal", "text": "Een omgeving in uw huisstijl waarin klanten uitsluitend zien wat voor hen bestemd is." },
+      { "title": "Professionele uitvoer", "text": "Genereer verzorgde rapporten en PDF-exports, met optionele versleutelde oplevering via e-mailintegratie." },
+      { "title": "Import en schaalbaarheid", "text": "Importeer gegevens uit Burp, Nuclei, scanners of notitietools in plaats van alles opnieuw in te voeren." }
+    ]
+  },
+  "governance": {
+    "title": "Beheer en schaalbaarheid",
+    "items": [
+      "Rollen voor beheerder, analist, manager, reviewer en klant",
+      "Uitnodigingen, MFA, auditlogging en rate limiting",
+      "Prullenbak, bewaartermijnen en toegangsbeheer voor gevoelige onderzoeken",
+      "Optionele RAG-kennis voor consistentie en sneller schrijven"
+    ]
+  },
+  "outcomes": {
+    "title": "Wat u ontvangt",
+    "items": [
+      "Een helder risicobeeld: wat is getest, wat is gevonden en wat betekent dit voor de organisatie",
+      "Praktische remediatie met impact, reproductiestappen en gerichte adviezen",
+      "Eén plaats voor scope, doelstellingen, samenvattingen en technische details",
+      "Gecontroleerde toegang in eigen stijl in plaats van losse e-mails en bestanden",
+      "Een zichtbare levenscyclus van openstaand tot verholpen, hertest of geaccepteerd risico",
+      "Gestructureerde ernstscores en verwijzingen die prioritering ondersteunen"
+    ]
+  },
+  "gallery": {
+    "title": "Schermen uit de rapportagetool",
+    "subtitle": "Opgeschoonde productbeelden uit een fictieve demo-opdracht. Er worden geen klantgegevens getoond.",
+    "items": [
+      { "src": "/reporter/login.webp", "alt": "Inlogscherm van Bitwise Reporter", "title": "Veilig inloggen" },
+      { "src": "/reporter/customer-portal.webp", "alt": "Dashboard van het klantportaal", "title": "Klantportaal" },
+      { "src": "/reporter/engagements-overview.webp", "alt": "Overzicht van beveiligingsopdrachten", "title": "Opdrachtoverzicht" },
+      { "src": "/reporter/finding-detail-1.webp", "alt": "Detailweergave van een bevinding met grafieken", "title": "Details van bevinding" },
+      { "src": "/reporter/finding-detail-2.webp", "alt": "Bewijs en opmerkingen bij een bevinding", "title": "Bewijs en opmerkingen" },
+      { "src": "/reporter/executive-summary.webp", "alt": "Weergave van de managementsamenvatting", "title": "Managementsamenvatting" }
+    ]
+  },
+  "why": {
+    "title": "Waarom dit belangrijk is",
+    "items": [
+      "Veel pentesters leveren aan het einde alleen een statisch bestand. Deze omgeving biedt transparantie tijdens de test, duidelijkheid over wat moet worden opgelost en bewijs van remediatie.",
+      "Het werkt als een levend rapport: bevindingen blijven gestructureerd, bewijs blijft gekoppeld en leidinggevenden kunnen zonder contextverlies van samenvatting naar techniek gaan."
+    ]
+  },
+  "delivery": {
+    "title": "Klaar voor oplevering",
+    "text": "Inbegrepen bij iedere opdracht. Niets te installeren en niets extra's te beheren: één veilige werkstroom voor rapportage en samenwerking met klanten.",
+    "primaryCta": "Bespreek de rapportagetool",
+    "secondaryCta": "Bekijk diensten"
+  }
+}
+

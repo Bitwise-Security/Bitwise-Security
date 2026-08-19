@@ -105,35 +105,35 @@
   },
   "gallery": {
     "title": "Screens from the reporter tool",
-    "subtitle": "Dark, focused, and built to keep sensitive assessment data clear without sacrificing polish.",
+    "subtitle": "Clean product views from a fabricated demo engagement. No customer data is shown.",
     "items": [
       {
-        "src": "/reporter/login.jpeg",
+        "src": "/reporter/login.webp",
         "alt": "Bitwise Reporter login screen",
         "title": "Secure login"
       },
       {
-        "src": "/reporter/customer-portal.jpeg",
+        "src": "/reporter/customer-portal.webp",
         "alt": "Customer portal dashboard",
         "title": "Customer portal"
       },
       {
-        "src": "/reporter/engagements-overview.jpeg",
+        "src": "/reporter/engagements-overview.webp",
         "alt": "Engagement overview dashboard",
         "title": "Engagement overview"
       },
       {
-        "src": "/reporter/finding-detail-1.jpeg",
+        "src": "/reporter/finding-detail-1.webp",
         "alt": "Finding detail view with sidebar and charts",
         "title": "Finding detail"
       },
       {
-        "src": "/reporter/finding-detail-2.jpeg",
+        "src": "/reporter/finding-detail-2.webp",
         "alt": "Finding detail evidence and comments",
         "title": "Evidence and comments"
       },
       {
-        "src": "/reporter/executive-summary.jpeg",
+        "src": "/reporter/executive-summary.webp",
         "alt": "Executive summary view",
         "title": "Executive summary"
       }

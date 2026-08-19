@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react";
 import homepageData from "@/data/homepage.json";
+import homepageDataNl from "@/data/homepage.nl.json";
+import { useLocale } from "@/lib/use-locale";
 
 export default function ThreatStream() {
+  const locale = useLocale();
   const [threatData, setThreatData] = useState([]);
 
   useEffect(() => {
-    const ts = homepageData.threatTypes;
-    const sv = homepageData.severityLevels;
+    const nextPageData = locale === "nl" ? homepageDataNl : homepageData;
+    const ts = nextPageData.threatTypes;
+    const sv = nextPageData.severityLevels;
     const iv = setInterval(() => {
       setThreatData(
         (p) =>
@@ -19,7 +23,7 @@ export default function ThreatStream() {
               ip: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
               port: Math.floor(Math.random() * 65535),
               severity: sv[Math.floor(Math.random() * sv.length)],
-              timestamp: new Date().toLocaleTimeString("en-US", {
+              timestamp: new Date().toLocaleTimeString(locale === "nl" ? "nl-NL" : "en-US", {
                 hour12: true,
               }),
               id: Date.now(),
@@ -28,7 +32,7 @@ export default function ThreatStream() {
       );
     }, 2800);
     return () => clearInterval(iv);
-  }, []);
+  }, [locale]);
 
   return (
     <div style={{ paddingRight: 10 }}>
@@ -61,7 +65,7 @@ export default function ThreatStream() {
               textShadow: "0 0 10px rgba(255,60,30,.6)",
             }}
           >
-            LIVE THREAT STREAM
+            {locale === "nl" ? "GESIMULEERDE AANVALSFEED" : "SIMULATED ATTACK FEED"}
           </span>
         </div>
         <div
@@ -109,7 +113,7 @@ export default function ThreatStream() {
               padding: "8px 10px",
               background: "rgba(3,10,24,.6)",
               borderRadius: 6,
-              borderLeft: `3px solid ${t.severity === "CRITICAL" ? "#ff2222" : t.severity === "HIGH" ? "#ff6622" : "#ffaa22"}`,
+              borderLeft: `3px solid ${t.severity === "CRITICAL" || t.severity === "KRITIEK" ? "#ff2222" : t.severity === "HIGH" || t.severity === "HOOG" ? "#ff6622" : "#ffaa22"}`,
             }}
           >
             <div
@@ -126,9 +130,9 @@ export default function ThreatStream() {
                   height: 6,
                   borderRadius: "50%",
                   background:
-                    t.severity === "CRITICAL"
+                    t.severity === "CRITICAL" || t.severity === "KRITIEK"
                       ? "#ff2222"
-                      : t.severity === "HIGH"
+                      : t.severity === "HIGH" || t.severity === "HOOG"
                         ? "#ff6622"
                         : "#ffaa22",
                   flexShrink: 0,

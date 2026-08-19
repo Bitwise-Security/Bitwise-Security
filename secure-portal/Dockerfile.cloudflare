@@ -1,0 +1,38 @@
+FROM node:22.17.0-bookworm-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY apps/edge/package.json apps/edge/package.json
+RUN npm ci
+COPY apps/api ./apps/api
+COPY apps/web ./apps/web
+RUN npm run build --workspace @bitwise-portal/api && npm run build --workspace @bitwise-portal/web
+
+FROM node:22.17.0-bookworm-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+# Debian's generated clamd.conf omits TCP directives rather than leaving
+# commented examples, so add the private loopback listener explicitly.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates clamav-daemon clamav-freshclam clamdscan gosu \
+  && rm -rf /var/lib/apt/lists/* \
+  && sed -i 's/^StreamMaxLength .*/StreamMaxLength 2048M/' /etc/clamav/clamd.conf \
+  && sed -i 's/^MaxScanSize .*/MaxScanSize 2048M/' /etc/clamav/clamd.conf \
+  && sed -i 's/^MaxFileSize .*/MaxFileSize 2048M/' /etc/clamav/clamd.conf \
+  && printf '\nTCPSocket 3310\nTCPAddr 127.0.0.1\n' >> /etc/clamav/clamd.conf
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY apps/edge/package.json apps/edge/package.json
+RUN npm ci --omit=dev --workspace @bitwise-portal/api --include-workspace-root \
+  && npm cache clean --force
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/web/dist ./apps/web/dist
+COPY cloudflare-entrypoint.sh /usr/local/bin/portal-entrypoint
+RUN chmod 0755 /usr/local/bin/portal-entrypoint \
+  && mkdir -p /run/clamav /var/log/clamav \
+  && chown -R clamav:clamav /run/clamav /var/log/clamav /var/lib/clamav \
+  && freshclam --stdout
+EXPOSE 4100
+ENTRYPOINT ["/usr/local/bin/portal-entrypoint"]

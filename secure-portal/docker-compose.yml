@@ -1,0 +1,98 @@
+services:
+  d1:
+    image: node:22.17.0-bookworm-slim
+    command: ["node", "--experimental-sqlite", "/app/dev/d1-bridge.mjs"]
+    environment:
+      D1_DB_PATH: /data/portal.sqlite
+      D1_MIGRATIONS_PATH: /migrations
+      PORT: "8788"
+    volumes:
+      - ./dev/d1-bridge.mjs:/app/dev/d1-bridge.mjs:ro
+      - ./apps/edge/migrations:/migrations:ro
+      - portal-d1:/data
+    ports:
+      - "127.0.0.1:8788:8788"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.0.3-alpine3.21
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27.1
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
+  portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PUBLIC_ORIGIN: http://localhost:4100
+      SERVE_STATIC: "true"
+      D1_BINDING_ORIGIN: http://d1:8788
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      EMAIL_PROVIDER: smtp
+    command: ["sh", "-c", "npm run db:seed:prod --workspace @bitwise-portal/api && npm run start --workspace @bitwise-portal/api"]
+    ports:
+      - "127.0.0.1:4100:4100"
+    volumes:
+      - portal-files:/app/data/private-files
+    depends_on:
+      d1:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  portal-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      D1_BINDING_ORIGIN: http://d1:8788
+      REDIS_URL: redis://redis:6379
+      STORAGE_MODE: local
+      LOCAL_STORAGE_PATH: /app/data/private-files
+      SCANNER_MODE: stub
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: mailpit
+    command: ["npm", "run", "worker", "--workspace", "@bitwise-portal/api"]
+    volumes:
+      - portal-files:/app/data/private-files
+    depends_on:
+      d1:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  portal-d1:
+  portal-files:

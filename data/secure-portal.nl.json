@@ -1,0 +1,65 @@
+{
+  "seo": {
+    "title": "Bitwise Security - Veilig bestandsportaal",
+    "description": "Wissel gevoelige documenten en beveiligingsrapporten uit via een privé en versleuteld klantportaal van Bitwise Security."
+  },
+  "hero": {
+    "eyebrow": "[ VEILIG BESTANDSPORTAAL ]",
+    "titlePrefix": "GEVOELIGE BESTANDEN.",
+    "titleAccent": "GECONTROLEERD OPGELEVERD.",
+    "description": "Een privéroute voor documenten die geen gewone e-mailbijlage mogen worden. Klanten kunnen gevoelig materiaal uploaden en rapporten ontvangen via een versleutelde en op malware gecontroleerde werkruimte."
+  },
+  "modes": [
+    { "label": "LOPENDE OPDRACHTEN", "title": "Privéwerkruimte voor klanten", "text": "Een eigen klantruimte met wachtwoord en MFA, met een duidelijke scheiding tussen documenten voor Bitwise Security en rapporten voor de klant." },
+    { "label": "EENMALIGE OPLEVERING", "title": "Overdracht met wachtwoord", "text": "Een tijdelijk downloadadres voor ontvangers zonder account. De link en het gegenereerde wachtwoord worden via verschillende kanalen gedeeld." }
+  ],
+  "principles": [
+    "Geen openbare of anonieme bestandslijsten",
+    "Iedere klantruimte is strikt gescheiden",
+    "Bestanden worden gedownload en nooit inline geopend",
+    "Instelbare vervaldatum en permanente verwijdering"
+  ],
+  "capabilities": {
+    "title": "Een doelbewuste overdrachtsprocedure",
+    "items": [
+      { "step": "01", "title": "Kies de ontvanger", "text": "Gebruik een klantruimte met MFA voor lopend werk of een zeven dagen geldige link met wachtwoord voor eenmalige oplevering." },
+      { "step": "02", "title": "Versleutel vóór opslag", "text": "De browser versleutelt bestandsdelen met AES-256-GCM voordat de versleutelde objectdata naar privéopslag worden geschreven." },
+      { "step": "03", "title": "Isoleer en controleer", "text": "Uploads blijven onbeschikbaar terwijl bestandstypecontroles en actuele malwaresignaturen de inhoud onderzoeken." },
+      { "step": "04", "title": "Lever gecontroleerd op", "text": "Kort geldige downloadsleutels voor eenmalig gebruik voorkomen dat een gekopieerd downloadadres blijvende toegang geeft." },
+      { "step": "05", "title": "Leg verantwoording vast", "text": "Uploads, downloads, verwijderingen, aanmeldingen en wijzigingen in rechten worden vastgelegd in het beveiligingslogboek." },
+      { "step": "06", "title": "Sluit de opdracht af", "text": "Bestanden kunnen automatisch verlopen en afgeronde klantruimtes kunnen na expliciete bevestiging permanent worden verwijderd." }
+    ]
+  },
+  "security": {
+    "title": "Sterke beveiliging zonder ingewikkelde bediening",
+    "text": "Het portaal houdt gevoelige beveiligingsmaatregelen achter een eenvoudige procedure: kies een ruimte, kies een bestand en verstuur. MFA, objectautorisatie, CSRF-bescherming, rate limiting en eenmalige downloads werken zonder onnodige keuzes voor de ontvanger.",
+    "items": [
+      "AES-256-GCM authenticated encryption",
+      "Privéopslag in Cloudflare R2",
+      "Wachtwoord en TOTP-MFA voor accounts",
+      "Argon2id-wachtwoordbeveiliging",
+      "Malwarecontrole vóór beschikbaarheid",
+      "Gecontroleerde toegang en verwijdering"
+    ]
+  },
+  "gallery": {
+    "title": "Het veilige portaal in gebruik",
+    "subtitle": "Alle screenshots bevatten fictieve namen en bestanden. Er worden geen klantgegevens getoond.",
+    "items": [
+      { "src": "/secure-portal/secure-login.png", "alt": "Beveiligd inlogscherm van Bitwise Secure Portal", "title": "Duidelijk en beschermd inloggen" },
+      { "src": "/secure-portal/admin-workspace.png", "alt": "Beheerderswerkruimte met versleutelde upload", "title": "Gecontroleerde klantruimte" },
+      { "src": "/secure-portal/protected-delivery.png", "alt": "Bestandsoverdracht met wachtwoord", "title": "Veilige eenmalige oplevering" },
+      { "src": "/secure-portal/client-workspace.png", "alt": "Privéwerkruimte voor documenten en rapporten", "title": "Eenvoudige klantervaring" }
+    ]
+  },
+  "retention": {
+    "title": "Ontworpen voor het einde van de opdracht",
+    "text": "Gevoelige onderzoeksgegevens mogen niet onbedoeld online blijven. Bestanden kunnen automatisch verlopen, beschermde links verlopen na zeven dagen en een beheerder kan een afgeronde klantruimte met alle objecten permanent verwijderen. Minimale inhoudsvrije auditinformatie kan voor beveiligingsverantwoording worden bewaard."
+  },
+  "delivery": {
+    "title": "Wilt u iets gevoeligs versturen?",
+    "text": "Neem eerst contact op met Bitwise Security. U ontvangt een uitnodiging voor een privéaccount of een passende beveiligde overdrachtslink. Verstuur nooit gevoelige onderzoeksinformatie via het normale contactformulier.",
+    "primaryCta": "Vraag veilige uitwisseling aan",
+    "secondaryCta": "Bekijk beveiligingsdiensten"
+  }
+}

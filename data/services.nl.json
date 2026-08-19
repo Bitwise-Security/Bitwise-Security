@@ -1,0 +1,159 @@
+{
+  "services": [
+    {
+      "id": "web-app-pentest",
+      "icon": "🌐",
+      "title": "Webapplicatie-pentesten",
+      "description": "Ik zoek naar logische fouten en kwetsbaarheden die geautomatiseerde tools missen. Van de OWASP Top 10 tot complexe API-bedrijfslogica: uw webapplicatie wordt getest tegen moderne aanvallen.",
+      "color": "cyber-blue",
+      "keyFocus": ["Broken Access Control", "SQLi", "XSS", "SSRF"],
+      "fullDetails": {
+        "overview": "Ik zoek naar logische fouten en kwetsbaarheden die geautomatiseerde tools missen. Van de OWASP Top 10 tot complexe API-bedrijfslogica: uw webapplicatie wordt getest tegen moderne aanvallen.",
+        "whatYouGet": [
+          "Handmatig testen naast geautomatiseerde scanners",
+          "Inventarisatie van API-endpoints en testen van bedrijfslogica",
+          "Controle van authenticatie en sessiebeheer",
+          "Een duidelijke proof-of-concept voor iedere bevinding",
+          "Managementsamenvatting en remediatieadvies voor ontwikkelaars"
+        ],
+        "ideal": "Start-ups die hun MVP beveiligen, SaaS-platformen, webshops en organisaties die een compliancecontrole nodig hebben.",
+        "frameworks": ["OWASP Top 10", "PTES", "WSTG"]
+      }
+    },
+    {
+      "id": "active-directory-pentest",
+      "icon": "🏢",
+      "title": "On-premises Active Directory-pentesten",
+      "description": "De sleutels tot de organisatie bevinden zich vaak in Active Directory. Ik simuleer een interne inbraak om aanvalspaden, privilege-escalatie en risico op domeinovername zichtbaar te maken.",
+      "color": "cyber-orange",
+      "keyFocus": ["Kerberoasting", "BloodHound-analyse", "GPO-misconfiguraties"],
+      "fullDetails": {
+        "overview": "De sleutels tot de organisatie bevinden zich vaak in Active Directory. Ik simuleer een interne inbraak en onderzoek hoe ver een aanvaller kan bewegen, rechten kan verhogen en uiteindelijk het domein kan overnemen.",
+        "whatYouGet": [
+          "Volledige analyse van aanvalspaden met BloodHound",
+          "Documentatie van privilege-escalatieketens",
+          "Controle van GPO- en ACL-misconfiguraties",
+          "Identificatie van technieken voor blijvende toegang",
+          "Remediatieroadmap op basis van impact"
+        ],
+        "ideal": "Organisaties met on-premises infrastructuur, hybride omgevingen of behoefte aan een realistische interne aanvalssimulatie.",
+        "frameworks": ["MITRE ATT&CK", "PTES", "BloodHound CE"]
+      }
+    },
+    {
+      "id": "azure-pentest",
+      "icon": "☁️",
+      "title": "Azure-pentest en beveiligingsaudit",
+      "description": "Cloudomgevingen worden vaak gecompromitteerd via fouten in identiteiten en configuraties. Ik voer een diepgaande audit uit van uw Azure-tenant en subscriptions.",
+      "color": "cyber-blue",
+      "keyFocus": ["Entra ID-beveiliging", "Key Vault-blootstelling", "Storage Account-lekken"],
+      "fullDetails": {
+        "overview": "Cloudomgevingen worden vaak gecompromitteerd via fouten in identiteiten en configuraties. Ik controleer uw Azure-tenant, subscriptions en resources om misbruikbare risico's zichtbaar te maken.",
+        "whatYouGet": [
+          "Controle van Entra ID-rechten en rollen",
+          "Controle op blootstelling van Storage Accounts en Key Vault",
+          "Misbruikpaden via Service Principals en Managed Identities",
+          "Analyse van netwerkbeveiligingsgroepen en firewallregels",
+          "Koppeling met de CIS Azure Benchmark"
+        ],
+        "ideal": "Organisaties met workloads in Azure, SaaS-bedrijven met een Azure-backend en bedrijven na een cloudmigratie.",
+        "frameworks": ["CIS Azure Benchmark", "MITRE ATT&CK for Cloud", "Microsoft Secure Score"]
+      }
+    },
+    {
+      "id": "mobile-app-pentest",
+      "icon": "📱",
+      "title": "Pentesten van mobiele apps (iOS en Android)",
+      "description": "Mobiele apps kennen specifieke risico's, zoals onveilige lokale opslag en zwakke binaire bescherming. Ik combineer statische en dynamische analyse.",
+      "color": "cyber-orange",
+      "keyFocus": ["Reverse engineering", "SSL-pinning omzeilen", "Lokale datalekken"],
+      "fullDetails": {
+        "overview": "Mobiele apps kennen specifieke risico's, zoals onveilige gegevensopslag, hardcoded geheimen en zwakke binaire bescherming. Ik voer statische en dynamische analyses uit op iOS- en Android-apps.",
+        "whatYouGet": [
+          "Statische APK/IPA-analyse en reverse engineering",
+          "Dynamische runtime-analyse met instrumentatie",
+          "Omzeilen van SSL-pinning en onderscheppen van verkeer",
+          "Controle van lokale opslag en keychain",
+          "Testen van backend-API's vanuit de mobiele context"
+        ],
+        "ideal": "Fintech- en zorgapps en andere mobiele producten die gevoelige persoonsgegevens of financiële transacties verwerken.",
+        "frameworks": ["OWASP MASVS", "OWASP MSTG", "Frida & Objection"]
+      }
+    },
+    {
+      "id": "source-code-analysis",
+      "icon": "🛡️",
+      "title": "Beveiligingsanalyse van broncode (SAST)",
+      "description": "Ik beoordeel uw code regel voor regel om beveiligingsproblemen bij de bron te vinden. Deze white-boxaanpak helpt kwetsbaarheden vroeg in de SDLC te verhelpen.",
+      "color": "cyber-blue",
+      "keyFocus": ["Hardcoded geheimen", "Onveilige functies", "Logische fouten"],
+      "fullDetails": {
+        "overview": "Ik beoordeel uw code regel voor regel om beveiligingsproblemen bij de bron te vinden. Deze white-boxaanpak is een effectieve manier om kwetsbaarheden vroeg in de SDLC te verhelpen.",
+        "whatYouGet": [
+          "Handmatige code-review naast geautomatiseerde SAST-tools",
+          "Detectie van hardcoded inloggegevens en geheimen",
+          "Controle van onveilige cryptografische implementaties",
+          "Identificatie van fouten in bedrijfslogica",
+          "Beveiligingsadvies voor de CI/CD-pipeline"
+        ],
+        "ideal": "Ontwikkelteams voor een release, organisaties na een beveiligingsincident en teams die DevSecOps invoeren.",
+        "frameworks": ["OWASP Code Review Guide", "CWE/SANS Top 25", "NIST SSDF"]
+      }
+    },
+    {
+      "id": "hardware-pentest",
+      "icon": "📟",
+      "title": "Hardware-pentesten",
+      "description": "Beveiliging stopt niet bij software. Ik onderzoek fysieke apparaten, IoT-hardware en embedded systemen op misbruik via fysieke toegang, debuginterfaces en side-channel-aanvallen.",
+      "color": "cyber-orange",
+      "keyFocus": ["UART/JTAG-debugging", "Firmware-extractie", "Buscommunicatie onderscheppen"],
+      "fullDetails": {
+        "overview": "Beveiliging stopt niet bij software. Ik onderzoek fysieke apparaten, IoT-hardware en embedded systemen op misbruik via fysieke toegang, debuginterfaces en side-channel-aanvallen.",
+        "whatYouGet": [
+          "Analyse van UART-, JTAG- en SPI/I2C-interfaces",
+          "Firmware-extractie en reverse engineering",
+          "Extractie van hardcoded inloggegevens en sleutels",
+          "Beoordeling van fysieke sabotagebestendigheid",
+          "Controle van secure boot en updatemechanismen"
+        ],
+        "ideal": "IoT-bedrijven, fabrikanten van slimme apparaten, industriële organisaties en hardware-start-ups voor een productlancering.",
+        "frameworks": ["OWASP IoT Top 10", "IEC 62443", "ETSI EN 303 645"]
+      }
+    },
+    {
+      "id": "website-development",
+      "icon": "💻",
+      "title": "Veilige websiteontwikkeling",
+      "description": "Professionele, responsieve websites met een duidelijke klantreis, sterke prestaties, technische SEO, toegankelijkheid en veilige deployment vanaf het begin.",
+      "color": "cyber-blue",
+      "keyFocus": ["Responsief ontwerp", "Technische SEO", "Veilige deployment", "Toegankelijkheid"],
+      "fullDetails": {
+        "overview": "Ik ontwerp en bouw professionele websites waarmee bezoekers snel begrijpen wat uw organisatie biedt en eenvoudig de volgende stap kunnen zetten. Beveiliging, prestaties, toegankelijkheid, analytics en zoekmachinefundamenten worden vanaf het begin meegenomen.",
+        "whatYouGet": [
+          "Een responsief ontwerp dat past bij uw organisatie",
+          "Duidelijke call-to-actions en een conversiegerichte klantreis",
+          "Technische SEO, metadata, sitemap en gestructureerde inhoud",
+          "Veilige hosting- en deploymentconfiguratie",
+          "Controles op prestaties, toegankelijkheid en verschillende apparaten"
+        ],
+        "ideal": "Consultants, sportclubs, organisatoren en kleine organisaties die een professionele website nodig hebben waarnaar zij klanten met vertrouwen kunnen verwijzen.",
+        "frameworks": ["Google Search Essentials", "WCAG", "OWASP Secure Coding Practices"]
+      }
+    }
+  ],
+  "methodology": [
+    { "step": "01", "title": "Scopebepaling", "description": "Grenzen en afspraken vastleggen om bedrijfsverstoring te voorkomen.", "icon": "check" },
+    { "step": "02", "title": "Verkenning", "description": "Relevante informatie over het doel verzamelen.", "icon": "search" },
+    { "step": "03", "title": "Exploitatie", "description": "De impact van een kwetsbaarheid veilig aantonen.", "icon": "shield" },
+    { "step": "04", "title": "Rapportage", "description": "Een gedetailleerde en geprioriteerde remediatieroadmap leveren.", "icon": "document" }
+  ],
+  "whyWorkWithMe": {
+    "title": "Waarom samenwerken met mij?",
+    "description": "U ontvangt een compleet rapport voor zowel ontwikkelaars, met technische PoC's, als belanghebbenden, met heldere risico-overzichten.",
+    "stats": [
+      { "label": "Technische PoC's", "value": "100%" },
+      { "label": "Managementsamenvattingen", "value": "Helder" },
+      { "label": "Ondersteuning achteraf", "value": "Inbegrepen" }
+    ]
+  }
+}
