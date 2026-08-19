@@ -64,8 +64,16 @@
       "new_sqlite_classes": ["PortalContainer", "AuthRateLimiter"]
     }
   ],
+  // Once a day, and it must stay that way. This previously ran every 5 minutes
+  // against a 10m sleepAfter, so the container could never reach its idle
+  // timeout and a standard-1 instance billed around the clock (~$50/month).
+  // Any interval shorter than sleepAfter silently recreates that bill.
+  //
+  // The handler stops the container as soon as housekeeping has drained rather
+  // than letting sleepAfter run down, which keeps a daily run near 3 minutes
+  // instead of ~11. Everything else wakes the container on demand.
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["0 3 * * *"]
   },
   "limits": {
     "cpu_ms": 300000

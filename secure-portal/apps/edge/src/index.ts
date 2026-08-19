@@ -333,25 +333,116 @@ async function proxyApi(request: Request, bindings: Cloudflare.Env): Promise<Res
   return container.fetch(forwarded);
 }
 
+/** Digest both sides first so the comparison cost cannot leak the token. */
+async function secretsMatch(offered: string, expected: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [offeredDigest, expectedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(offered)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+  ]);
+  const offeredBytes = new Uint8Array(offeredDigest);
+  const expectedBytes = new Uint8Array(expectedDigest);
+  let difference = 0;
+  for (let index = 0; index < expectedBytes.length; index += 1) {
+    difference |= offeredBytes[index]! ^ expectedBytes[index]!;
+  }
+  return difference === 0;
+}
+
+/**
+ * Operator-only start/stop for the container, so it can be pre-warmed before a
+ * client session and shut down straight afterwards instead of idling on the
+ * clock. Every failure answers 404 so the route stays invisible without the
+ * token, and an unset token disables the route entirely.
+ */
+async function containerControl(request: Request, bindings: Cloudflare.Env): Promise<Response> {
+  const expected = bindings.CONTAINER_CONTROL_TOKEN;
+  const offered = request.headers.get("Authorization")?.replace(/^Bearer\s+/u, "") ?? "";
+  if (!expected || !offered || !(await secretsMatch(offered, expected))) {
+    return new Response(null, { status: 404 });
+  }
+
+  const container = bindings.PORTAL_CONTAINER.getByName(CONTAINER_NAME);
+  const route = `${request.method.toUpperCase()} ${new URL(request.url).pathname}`;
+  try {
+    if (route === "POST /control/container/start") {
+      // Resolves once port 4100 accepts connections. ClamAV finishes loading
+      // its signature database a little after that, so uploads attempted in the
+      // first moments can still be refused by the scanner.
+      await container.startAndWaitForPorts(4100);
+      return json({ status: "running" });
+    }
+    if (route === "POST /control/container/stop") {
+      await container.stop();
+      return json({ status: "stopped" });
+    }
+    if (route === "GET /control/container/status") {
+      return json({ status: await container.getState() });
+    }
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "container_control_error",
+      route,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
+    return json({ error: "Container control failed" }, 502);
+  }
+  return new Response(null, { status: 404 });
+}
+
+/**
+ * The container needs roughly a minute to boot and bring ClamAV up before
+ * apps/api/dist/worker.js starts draining expirations, so give it a window and
+ * then stop it. Letting sleepAfter run down instead would bill ~11 idle minutes
+ * per day, which on its own is most of the monthly included allowance.
+ */
+const MAINTENANCE_DRAIN_MS = 120_000;
+
+/**
+ * Flushes deferred housekeeping once a day: expiring files whose share links
+ * have lapsed, deleting their R2 objects, and abandoning stale uploads. Access
+ * control never depends on this running — every request re-checks expiry
+ * directly — so a skipped run defers cleanup rather than exposing anything.
+ */
+async function runDailyMaintenance(bindings: Cloudflare.Env): Promise<void> {
+  const container = bindings.PORTAL_CONTAINER.getByName(CONTAINER_NAME);
+  const before = await container.getState();
+  // Already awake means somebody is using the portal: its worker loop is
+  // draining anyway, and stopping the instance would cut their session off.
+  if (before.status === "running" || before.status === "healthy") return;
+  try {
+    await container.startAndWaitForPorts(4100);
+    await new Promise((resolve) => setTimeout(resolve, MAINTENANCE_DRAIN_MS));
+  } finally {
+    // Stop on the failure path too, so a bad run cannot strand the instance
+    // awake and billing until sleepAfter expires.
+    await container.stop().catch((error: unknown) => {
+      console.error(JSON.stringify({
+        event: "maintenance_stop_failed",
+        error: error instanceof Error ? error.message : "unknown",
+      }));
+    });
+  }
+}
+
 export default {
   async fetch(request, bindings): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/internal/")) return securityHeaders(new Response(null, { status: 404 }));
+    if (url.pathname.startsWith("/control/")) {
+      const limited = await enforceEdgeRateLimit(request, bindings);
+      return securityHeaders(limited ?? await containerControl(request, bindings));
+    }
     const response = url.pathname.startsWith("/api/")
       ? await proxyApi(request, bindings)
       : await bindings.ASSETS.fetch(request);
     return securityHeaders(response);
   },
 
-  scheduled(_controller, bindings, ctx): void {
-    const container = bindings.PORTAL_CONTAINER.getByName(CONTAINER_NAME);
-    ctx.waitUntil(
-      container
-        .fetch("https://portal-container.internal/api/v1/health")
-        .then((response) => response.body?.cancel())
-        .catch((error: unknown) => {
-          console.error(JSON.stringify({ event: "container_keepalive_failed", error: error instanceof Error ? error.message : "unknown" }));
-        }),
-    );
+  // Awaited rather than handed to waitUntil: a cron invocation may run for up
+  // to 15 minutes, whereas waitUntil only guarantees 30 seconds, which is less
+  // than the drain window.
+  async scheduled(_controller, bindings): Promise<void> {
+    await runDailyMaintenance(bindings);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

@@ -64,8 +64,14 @@
       "new_sqlite_classes": ["PortalContainer", "AuthRateLimiter"]
     }
   ],
+  // Empty on purpose, and unlike production it stays empty: staging holds only
+  // test data, so nothing here is worth spending container minutes on. This
+  // previously ran every 5 minutes against a 10m sleepAfter, which meant the
+  // container could never reach its idle timeout and billed around the clock.
+  // An explicit empty array clears schedules already registered at Cloudflare,
+  // which omitting the key does not.
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": []
   },
   "limits": {
     "cpu_ms": 300000

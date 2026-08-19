@@ -19,6 +19,11 @@ const AUTH_POLICIES = new Map<string, RatePolicy>([
   ["POST /api/v1/admin/clients/invitations", { limit: 20, windowSeconds: 3600 }],
   ["POST /api/v1/admin/spaces", { limit: 20, windowSeconds: 3600 }],
   ["POST /api/v1/public/secure-transfers/unlock", { limit: 10, windowSeconds: 300 }],
+  // Operator container controls: throttled so the bearer token cannot be
+  // brute-forced against an endpoint that answers 404 either way.
+  ["POST /control/container/start", { limit: 10, windowSeconds: 600 }],
+  ["POST /control/container/stop", { limit: 10, windowSeconds: 600 }],
+  ["GET /control/container/status", { limit: 30, windowSeconds: 600 }],
 ]);
 
 export function ratePolicyFor(method: string, pathname: string): RatePolicy | undefined {
